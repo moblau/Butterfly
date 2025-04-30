@@ -5,6 +5,26 @@
               companyName="Zuluby" pluginCharacteristicsValue="pluginIsSynth,pluginWantsMidiIn">
   <MAINGROUP id="iFRJHZ" name="Butterfly">
     <GROUP id="{51942F9A-32FD-D5FE-0310-E53513AF045D}" name="Source">
+      <GROUP id="{82BC2639-C5F3-0956-BAC6-E9EE87CD6B9E}" name="DSP">
+        <FILE id="zTuGrE" name="WahProcessor.cpp" compile="1" resource="0"
+              file="Source/WahProcessor.cpp"/>
+        <FILE id="tPQ3cE" name="WahProcessor.h" compile="0" resource="0" file="Source/WahProcessor.h"/>
+      </GROUP>
+      <GROUP id="{6AB513EF-23B5-A912-A7A6-0C7D0D53FA8C}" name="UI">
+        <FILE id="oa1hZT" name="FXUnit.cpp" compile="1" resource="0" file="Source/FXUnit.cpp"/>
+        <FILE id="g17Prq" name="FXUnit.h" compile="0" resource="0" file="Source/FXUnit.h"/>
+        <FILE id="nBUrqB" name="FXChain.cpp" compile="1" resource="0" file="Source/FXChain.cpp"/>
+        <FILE id="lpqDmm" name="FXChain.h" compile="0" resource="0" file="Source/FXChain.h"/>
+        <FILE id="ISYg3x" name="WahComponent.cpp" compile="1" resource="0"
+              file="Source/WahComponent.cpp"/>
+        <FILE id="trHlCQ" name="WahComponent.h" compile="0" resource="0" file="Source/WahComponent.h"/>
+      </GROUP>
+      <FILE id="cOf4hl" name="SmoothDownsampler.cpp" compile="1" resource="0"
+            file="Source/SmoothDownsampler.cpp"/>
+      <FILE id="XtD4UD" name="SmoothDownsampler.h" compile="0" resource="0"
+            file="Source/SmoothDownsampler.h"/>
+      <FILE id="qD02hE" name="VoiceEditor.cpp" compile="1" resource="0" file="Source/VoiceEditor.cpp"/>
+      <FILE id="B5VOPf" name="VoiceEditor.h" compile="0" resource="0" file="Source/VoiceEditor.h"/>
       <FILE id="wtCFRQ" name="StepSequencer.cpp" compile="1" resource="0"
             file="Source/StepSequencer.cpp"/>
       <FILE id="nlokZ5" name="StepSequencer.h" compile="0" resource="0" file="Source/StepSequencer.h"/>

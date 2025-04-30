@@ -12,11 +12,12 @@
 #pragma once
 #include <JuceHeader.h>
 #include "FMSound.h"
+#include "SmoothDownsampler.h"
 
 class FMVoice : public juce::SynthesiserVoice
 {
 public:
-    FMVoice() {}
+    FMVoice() : ds(0){}
 
     bool canPlaySound(juce::SynthesiserSound* sound) override
     {
@@ -59,10 +60,27 @@ public:
         for (int sample = 0; sample < numSamples; ++sample)
         {
             // Generate modulator signal
-            float modSignal = getModulatorSample(modPhase) * modulationIndex;
+            modSignal = getSample(modPhase, modWaveform) * modulationIndex;
             
-            float output = std::sin(phase + modSignal) * level;
-
+//            float output = std::sin(phase + modSignal) * level;
+            float output = getSample(phase+modSignal,waveform)*level;
+            output = ds.processSample(output);
+//            switch (waveform)
+//            {
+//                case 0: // Sine
+//                    output = std::sin(rawPhase);
+//                    break;
+//                case 1: // Saw
+//                    output = 2.0f * (rawPhase / (2.0f * juce::MathConstants<float>::pi) - std::floor(0.5f + rawPhase / (2.0f * juce::MathConstants<float>::pi)));
+//                    break;
+//                case 2: // Square
+//                    output = (std::sin(rawPhase) >= 0.0f) ? 1.0f : -1.0f;
+//                    break;
+//                default:
+//                    output = std::sin(rawPhase);
+//                    break;
+//            }
+            
             // Apply panning
             float outputL = output * leftGain;
             float outputR = output * rightGain;
@@ -75,20 +93,31 @@ public:
             phase += carrierFrequency * twoPi / getSampleRate();
             modPhase += modulatorFrequency * twoPi / getSampleRate();
 
-            if (phase > twoPi) phase -= twoPi;
+            if (phase > twoPi) {
+                phase -= twoPi;
+                
+            }
+
             if (modPhase > twoPi) modPhase -= twoPi;
         }
     }
 
+    void resetModPhase(){
+        phaseReset = false;
+    }
+    
+    bool getPhaseReset(){
+        return phaseReset;
+    }
     void setPan(float newPan) { pan = juce::jlimit(0.0f, 1.0f, newPan); }
     void setModulatorWaveform(int waveformId)
     {
         switch (waveformId)
         {
-            case 0: modWaveform = ModulatorWaveform::Sine; break;
-            case 1: modWaveform = ModulatorWaveform::Saw; break;
-            case 2: modWaveform = ModulatorWaveform::Square; break;
-            default: modWaveform = ModulatorWaveform::Sine; break;
+            case 0: modWaveform = Waveform::Sine; break;
+            case 1: modWaveform = Waveform::Saw; break;
+            case 2: modWaveform = Waveform::Square; break;
+            default: modWaveform = Waveform::Sine; break;
         }
     }
 
@@ -110,30 +139,52 @@ public:
         modulatorFrequency = carrierFrequency * modulationRatio;
     }
    
+    void setWaveform(int waveformId){
+        switch (waveformId)
+        {
+            case 0: waveform = Waveform::Sine; break;
+            case 1: waveform = Waveform::Saw; break;
+            case 2: waveform = Waveform::Square; break;
+            default: waveform = Waveform::Sine; break;
+        }
+    }
+    
+    float getCarrierPhase() const { return phase; }
+    void resetCarrierPhase() { phase = 0.0f; }
+    float getModSignal() const { return modSignal; }
+    void setDownsampleFactor(int dsFactor){
+        this->dsFactor = dsFactor;
+        ds.setFactor(dsFactor);
+
+    }
+    
 private:
-    enum class ModulatorWaveform
+    enum class Waveform
     {
         Sine,
         Saw,
         Square
     };
 
-    float getModulatorSample(float phase)
+    float getSample(float phase, Waveform wf)
     {
-        switch (modWaveform)
+        switch (wf)
         {
-            case ModulatorWaveform::Sine:
+            case Waveform::Sine:
                 return std::sin(phase);
-            case ModulatorWaveform::Saw:
+            case Waveform::Saw:
                 return 2.0f * (phase / twoPi - std::floor(phase / twoPi + 0.5f)); // Sawtooth (-1 to 1)
-            case ModulatorWaveform::Square:
+            case Waveform::Square:
                 return (std::fmod(phase, twoPi) < juce::MathConstants<float>::pi ? 1.0f : -1.0f);
             default:
                 return std::sin(phase);
         }
     }
 
-    ModulatorWaveform modWaveform = ModulatorWaveform::Sine;
+    Waveform modWaveform = Waveform::Sine;
+    Waveform waveform = Waveform::Sine;
+    
+    float modSignal = 0;
     float phase = 0.0f, modPhase = 0.0f;
     float carrierFrequency = 0.0f, modulatorFrequency = 0.0f;
     float level = 0.0f;
@@ -143,8 +194,9 @@ private:
     float modulationRatio = 3.0f; // Modulator-to-carrier ratio
     int modRatioNum = 3;
     int modRatioDen = 1;
-
+    float dsFactor;
     float pan = 0.5f; // 0 = left, 1 = right
-
+    SmoothDownsampler ds;
+    bool phaseReset = false;
     const float twoPi = juce::MathConstants<float>::twoPi;
 };

@@ -98,6 +98,8 @@ void ButterflyAudioProcessor::changeProgramName (int index, const juce::String& 
 void ButterflyAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
     synth.setCurrentPlaybackSampleRate(sampleRate);
+    alienWah.prepare(sampleRate, samplesPerBlock, sampleRate); // Allow a reasonable max delay
+    alienWah.setParameters(0.6f, 0.0f, 0.5f, 20);
 }
 
 void ButterflyAudioProcessor::releaseResources()
@@ -134,71 +136,144 @@ bool ButterflyAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts
 
 void ButterflyAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
-    buffer.clear(); // Clear buffer before processing
-    
-    for (int i = 0; i < synth.getNumVoices(); ++i)
-    {
-        if (auto* voice = dynamic_cast<FMVoice*>(synth.getVoice(i)))
-        {
-            switch (i)
+    int currentStep = 0;
+    if (auto* playhead = getPlayHead()){
+        juce::AudioPlayHead::CurrentPositionInfo info;
+        if ( playhead->getCurrentPosition(info)){
+            int stepCount = static_cast<int>(*apvts.getRawParameterValue("STEP_COUNT"));
+            
+            int rateIndex = static_cast<int>(*apvts.getRawParameterValue("RATE")); // 0 = 1/2, 1 = 1/4, etc.
+
+            double beatLength = 0.25; // fallback
+            switch (rateIndex)
             {
-                case 0:
-                    voice->setPan(*apvts.getRawParameterValue("PAN1"));
-                    voice->setModulationRatio(
-                        static_cast<int>(*apvts.getRawParameterValue("MOD_RATIO_NUM1")),
-                        static_cast<int>(*apvts.getRawParameterValue("MOD_RATIO_DEN1")));
-                    voice->setModulationIndex(*apvts.getRawParameterValue("MOD_INDEX1"));
-                    voice->setModulatorWaveform(static_cast<int>(*apvts.getRawParameterValue("MOD_WAVEFORM1")));
-                    voice->setDetune(*apvts.getRawParameterValue("DETUNE1"));
-                    break;
-                case 1:
-                    voice->setPan(*apvts.getRawParameterValue("PAN2"));
-                    voice->setModulationRatio(
-                        static_cast<int>(*apvts.getRawParameterValue("MOD_RATIO_NUM2")),
-                        static_cast<int>(*apvts.getRawParameterValue("MOD_RATIO_DEN2")));
-                    voice->setModulationIndex(*apvts.getRawParameterValue("MOD_INDEX2"));
-                    voice->setModulatorWaveform(static_cast<int>(*apvts.getRawParameterValue("MOD_WAVEFORM2")));
-                    voice->setDetune(*apvts.getRawParameterValue("DETUNE2"));
-                    break;
-                case 2:
-                    voice->setPan(*apvts.getRawParameterValue("PAN3"));
-                    voice->setModulationRatio(
-                        static_cast<int>(*apvts.getRawParameterValue("MOD_RATIO_NUM3")),
-                        static_cast<int>(*apvts.getRawParameterValue("MOD_RATIO_DEN3")));
-                    voice->setModulationIndex(*apvts.getRawParameterValue("MOD_INDEX3"));
-                    voice->setModulatorWaveform(static_cast<int>(*apvts.getRawParameterValue("MOD_WAVEFORM3")));
-                    voice->setDetune(*apvts.getRawParameterValue("DETUNE3"));
-                    break;
-                case 3:
-                    voice->setPan(*apvts.getRawParameterValue("PAN4"));
-                    voice->setModulationRatio(
-                        static_cast<int>(*apvts.getRawParameterValue("MOD_RATIO_NUM4")),
-                        static_cast<int>(*apvts.getRawParameterValue("MOD_RATIO_DEN4")));
-                    voice->setModulationIndex(*apvts.getRawParameterValue("MOD_INDEX4"));
-                    voice->setModulatorWaveform(static_cast<int>(*apvts.getRawParameterValue("MOD_WAVEFORM4")));
-                    voice->setDetune(*apvts.getRawParameterValue("DETUNE4"));
-                    break;
-                default:
-                    break;
+                case 0: beatLength = 2.0; break;   // "1/2"
+                case 1: beatLength = 1.0; break;   // "1/4"
+                case 2: beatLength = 0.5; break;   // "1/8"
+                case 3: beatLength = 0.25; break;  // "1/16"
+                default: break;
+            }
+            
+            double seqLengthInBeats = stepCount * beatLength;
+            if (seqLengthInBeats > 0.0)
+            {
+                double beatInLoop = std::fmod(info.ppqPosition, seqLengthInBeats);
+                currentStep = static_cast<int>(beatInLoop/beatLength);
+                currentStepAtom.store(currentStep);
+                
             }
         }
     }
-
-    synth.renderNextBlock(buffer, midiMessages, 0, buffer.getNumSamples());
     
-    if (auto* editor = dynamic_cast<ButterflyAudioProcessorEditor*>(getActiveEditor()))
-    {
-        int currentStep = editor->getCurrentStep();
+    
+    buffer.clear(); // Clear buffer before processing
+    
+//    if (auto* editor = dynamic_cast<ButterflyAudioProcessorEditor*>(getActiveEditor()))
+//    {
+//        currentStep = editor->getCurrentStep();
+//    }
         
-        
-        // Get the step value from the parameter value tree (APVTS)
-        float stepValue = *apvts.getRawParameterValue("step" + juce::String(currentStep));  // Access the value of the current step
-        
-        gainProcessor.setGainLinear(stepValue);
-        juce::dsp::AudioBlock<float> block(buffer);
-        juce::dsp::ProcessContextReplacing<float> context(block);  // Create a process context
-        gainProcessor.process(context);
-    }
+    // Get the step value from the parameter value tree (APVTS)
+    float stepValue = *apvts.getRawParameterValue("step" + juce::String(currentStep));  // Access the value of the current step
+    
+
+    
+    // Inside your for loop where you process the voices:
+//    for (int i = 0; i < synth.getNumVoices(); ++i)
+//    {
+//        if (auto* voice = dynamic_cast<FMVoice*>(synth.getVoice(i)))
+//        {
+//            switch (i)
+//            {
+//                case 0:
+//                {
+//                    // Get modulation toggle states from APVTS
+//                    bool modAmountActive = *apvts.getRawParameterValue("MOD_AMOUNT_ACTIVE");
+//                    bool modNumActive    = *apvts.getRawParameterValue("MOD_NUM_ACTIVE");
+//                    bool modDenActive    = *apvts.getRawParameterValue("MOD_DEN_ACTIVE");
+//
+//                    // Step modulation signal (scaled from 0–1 to -5 to +5)
+//                    float scaledStepRatio = stepValue * 10.0f - 5.0f;
+//
+//                    // === Pan ===
+//                    voice->setPan(*apvts.getRawParameterValue("PAN1"));
+//
+//                    // === Mod Ratio Numerator ===
+//                    int baseNumerator = static_cast<int>(*apvts.getRawParameterValue("MOD_RATIO_NUM1"));
+//                    int modNumerator = baseNumerator + (modNumActive ? static_cast<int>(scaledStepRatio) : 0);
+//                    modNumerator = juce::jlimit(1, 5, modNumerator);
+//
+//                    // === Mod Ratio Denominator ===
+//                    int baseDenominator = static_cast<int>(*apvts.getRawParameterValue("MOD_RATIO_DEN1"));
+//                    int modDenominator = baseDenominator + (modDenActive ? static_cast<int>(scaledStepRatio) : 0);
+//                    modDenominator = juce::jlimit(1, 5, modDenominator);
+//
+//                    voice->setModulationRatio(modNumerator, modDenominator);
+//                    
+//                    
+//                    // === Modulation Index ===
+//                    float baseIndex = *apvts.getRawParameterValue("MOD_INDEX1");
+//                    float scaledStepModAmt = stepValue*100-50;
+//                    float modIndex = baseIndex + (modAmountActive ? scaledStepModAmt : 0.0f);
+//                    modIndex = juce::jlimit(0.0f, 50.0f, modIndex);
+//
+//                    voice->setModulationIndex(modIndex);
+//
+//                    // === Other unchanged parameters ===
+//                    voice->setModulatorWaveform(static_cast<int>(*apvts.getRawParameterValue("MOD_WAVEFORM1")));
+//                    voice->setDetune(*apvts.getRawParameterValue("DETUNE1"));
+//                    
+//                    
+//                    voice->setWaveform(static_cast<int>(*apvts.getRawParameterValue("WAVEFORM1")));
+//
+//                    break;
+//                }
+//                case 1:
+//                    voice->setPan(*apvts.getRawParameterValue("PAN2"));
+//                    voice->setModulationRatio(
+//                        static_cast<int>(*apvts.getRawParameterValue("MOD_RATIO_NUM2")),
+//                        static_cast<int>(*apvts.getRawParameterValue("MOD_RATIO_DEN2"))
+//                    );
+//                    voice->setModulationIndex(*apvts.getRawParameterValue("MOD_INDEX2"));
+//                    voice->setModulatorWaveform(static_cast<int>(*apvts.getRawParameterValue("MOD_WAVEFORM2")));
+//                    voice->setDetune(*apvts.getRawParameterValue("DETUNE2"));
+//                    voice->setWaveform(static_cast<int>(*apvts.getRawParameterValue("WAVEFORM2")));
+//                    break;
+//                case 2:
+//                    voice->setPan(*apvts.getRawParameterValue("PAN3"));
+//                    voice->setModulationRatio(
+//                        static_cast<int>(*apvts.getRawParameterValue("MOD_RATIO_NUM3")),
+//                        static_cast<int>(*apvts.getRawParameterValue("MOD_RATIO_DEN3"))
+//                    );
+//                    voice->setModulationIndex(*apvts.getRawParameterValue("MOD_INDEX3"));
+//                    voice->setModulatorWaveform(static_cast<int>(*apvts.getRawParameterValue("MOD_WAVEFORM3")));
+//                    voice->setDetune(*apvts.getRawParameterValue("DETUNE3"));
+//                    voice->setWaveform(static_cast<int>(*apvts.getRawParameterValue("WAVEFORM3")));
+//                    break;
+//                case 3:
+//                    voice->setPan(*apvts.getRawParameterValue("PAN4"));
+//                    voice->setModulationRatio(
+//                        static_cast<int>(*apvts.getRawParameterValue("MOD_RATIO_NUM4")),
+//                        static_cast<int>(*apvts.getRawParameterValue("MOD_RATIO_DEN4"))
+//                    );
+//                    voice->setModulationIndex(*apvts.getRawParameterValue("MOD_INDEX4"));
+//                    voice->setModulatorWaveform(static_cast<int>(*apvts.getRawParameterValue("MOD_WAVEFORM4")));
+//                    voice->setDetune(*apvts.getRawParameterValue("DETUNE4"));
+//                    voice->setWaveform(static_cast<int>(*apvts.getRawParameterValue("WAVEFORM4")));
+//                    break;
+//                default:
+//                    break;
+//            }
+//        }
+//    }
+    synth.updateSynthParameters(apvts, stepValue);
+    synth.renderNextBlock(buffer, midiMessages, 0, buffer.getNumSamples());
+    alienWah.process(buffer);
+//    gainProcessor.setGainLinear(stepValue);
+//    juce::dsp::AudioBlock<float> block(buffer);
+//    juce::dsp::ProcessContextReplacing<float> context(block);  // Create a process context
+//    gainProcessor.process(context);
+    
     
     
     
@@ -241,16 +316,16 @@ juce::AudioProcessorValueTreeState::ParameterLayout ButterflyAudioProcessor::cre
     std::vector<std::unique_ptr<juce::RangedAudioParameter>> parameters;
 
     // Panning Parameters
-    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("PAN1", 1), "Pan 1", 0.0f, 1.0f, 0.5f));
-    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("PAN2", 1), "Pan 2", 0.0f, 1.0f, 0.5f));
-    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("PAN3", 1), "Pan 3", 0.0f, 1.0f, 0.5f));
-    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("PAN4", 1), "Pan 4", 0.0f, 1.0f, 0.5f));
-
-    // Detune Parameters
-    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("DETUNE1", 1), "Detune 1", -0.5f, 0.5f, 0.0f));
-    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("DETUNE2", 1), "Detune 2", -0.5f, 0.5f, 0.0f));
-    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("DETUNE3", 1), "Detune 3", -0.5f, 0.5f, 0.0f));
-    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("DETUNE4", 1), "Detune 4", -0.5f, 0.5f, 0.0f));
+//    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("PAN1", 1), "Pan 1", 0.0f, 1.0f, 0.5f));
+//    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("PAN2", 1), "Pan 2", 0.0f, 1.0f, 0.5f));
+//    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("PAN3", 1), "Pan 3", 0.0f, 1.0f, 0.5f));
+//    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("PAN4", 1), "Pan 4", 0.0f, 1.0f, 0.5f));
+//
+//    // Detune Parameters
+//    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("DETUNE1", 1), "Detune 1", -0.5f, 0.5f, 0.0f));
+//    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("DETUNE2", 1), "Detune 2", -0.5f, 0.5f, 0.0f));
+//    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("DETUNE3", 1), "Detune 3", -0.5f, 0.5f, 0.0f));
+//    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("DETUNE4", 1), "Detune 4", -0.5f, 0.5f, 0.0f));
 
     // Modulation Ratio Numerator and Denominator (1 to 16)
     for (int i = 1; i <= 4; ++i)
@@ -258,36 +333,76 @@ juce::AudioProcessorValueTreeState::ParameterLayout ButterflyAudioProcessor::cre
         parameters.push_back(std::make_unique<juce::AudioParameterInt>(
             juce::ParameterID("MOD_RATIO_NUM" + std::to_string(i), 1),
             "Mod Ratio Numerator " + std::to_string(i),
-            1, 16, 1));
+            1, 5, 1));
 
         parameters.push_back(std::make_unique<juce::AudioParameterInt>(
             juce::ParameterID("MOD_RATIO_DEN" + std::to_string(i), 1),
             "Mod Ratio Denominator " + std::to_string(i),
-            1, 16, 1));
+            1, 5, 1));
     }
 
-    // Modulation Index
-    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("MOD_INDEX1", 1), "Mod Index 1", 0.0f, 50.0f, 1.0f));
-    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("MOD_INDEX2", 1), "Mod Index 2", 0.0f, 50.0f, 1.0f));
-    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("MOD_INDEX3", 1), "Mod Index 3", 0.0f, 50.0f, 1.0f));
-    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("MOD_INDEX4", 1), "Mod Index 4", 0.0f, 50.0f, 1.0f));
+//    // Modulation Index
+//    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("MOD_INDEX1", 1), "Mod Index 1", 0.0f, 50.0f, 1.0f));
+//    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("MOD_INDEX2", 1), "Mod Index 2", 0.0f, 50.0f, 1.0f));
+//    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("MOD_INDEX3", 1), "Mod Index 3", 0.0f, 50.0f, 1.0f));
+//    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("MOD_INDEX4", 1), "Mod Index 4", 0.0f, 50.0f, 1.0f));
+//
+//    // Modulator Waveform Selectors
+//    parameters.push_back(std::make_unique<juce::AudioParameterChoice>(
+//        juce::ParameterID("MOD_WAVEFORM1", 1), "Mod Waveform 1",
+//        juce::StringArray{ "Sine", "Saw", "Square" }, 0));
+//
+//    parameters.push_back(std::make_unique<juce::AudioParameterChoice>(
+//        juce::ParameterID("MOD_WAVEFORM2", 1), "Mod Waveform 2",
+//        juce::StringArray{ "Sine", "Saw", "Square" }, 0));
+//
+//    parameters.push_back(std::make_unique<juce::AudioParameterChoice>(
+//        juce::ParameterID("MOD_WAVEFORM3", 1), "Mod Waveform 3",
+//        juce::StringArray{ "Sine", "Saw", "Square" }, 0));
+//
+//    parameters.push_back(std::make_unique<juce::AudioParameterChoice>(
+//        juce::ParameterID("MOD_WAVEFORM4", 1), "Mod Waveform 4",
+//        juce::StringArray{ "Sine", "Saw", "Square" }, 0));
+//    
+//    
+//    parameters.push_back(std::make_unique<juce::AudioParameterChoice>(
+//        juce::ParameterID("WAVEFORM1", 1), "Waveform 1",
+//        juce::StringArray{ "Sine", "Saw", "Square" }, 0));
+//
+//    parameters.push_back(std::make_unique<juce::AudioParameterChoice>(
+//        juce::ParameterID("WAVEFORM2", 1), "Waveform 2",
+//        juce::StringArray{ "Sine", "Saw", "Square" }, 0));
+//
+//    parameters.push_back(std::make_unique<juce::AudioParameterChoice>(
+//        juce::ParameterID("WAVEFORM3", 1), "Waveform 3",
+//        juce::StringArray{ "Sine", "Saw", "Square" }, 0));
+//
+//    parameters.push_back(std::make_unique<juce::AudioParameterChoice>(
+//        juce::ParameterID("WAVEFORM4", 1), "Waveform 4",
+//        juce::StringArray{ "Sine", "Saw", "Square" }, 0));
+    
+    for (int i = 1; i <= 4; ++i)
+    {
+        parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
+            juce::ParameterID("PAN" + std::to_string(i), 1), "Pan " + std::to_string(i), 0.0f, 1.0f, 0.5f));
 
-    // Modulator Waveform Selectors
-    parameters.push_back(std::make_unique<juce::AudioParameterChoice>(
-        juce::ParameterID("MOD_WAVEFORM1", 1), "Mod Waveform 1",
-        juce::StringArray{ "Sine", "Saw", "Square" }, 0));
+        parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
+            juce::ParameterID("DETUNE" + std::to_string(i), 1), "Detune " + std::to_string(i), -0.5f, 0.5f, 0.0f));
 
-    parameters.push_back(std::make_unique<juce::AudioParameterChoice>(
-        juce::ParameterID("MOD_WAVEFORM2", 1), "Mod Waveform 2",
-        juce::StringArray{ "Sine", "Saw", "Square" }, 0));
+        parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
+            juce::ParameterID("MOD_INDEX" + std::to_string(i), 1), "Mod Index " + std::to_string(i), 0.0f, 50.0f, 1.0f));
+        
+        parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
+            juce::ParameterID("DOWNSAMPLE" + std::to_string(i), 1), "Downsample" + std::to_string(i), 0.0f, 50.0f, 1.0f));
 
-    parameters.push_back(std::make_unique<juce::AudioParameterChoice>(
-        juce::ParameterID("MOD_WAVEFORM3", 1), "Mod Waveform 3",
-        juce::StringArray{ "Sine", "Saw", "Square" }, 0));
+        parameters.push_back(std::make_unique<juce::AudioParameterChoice>(
+            juce::ParameterID("MOD_WAVEFORM" + std::to_string(i), 1), "Mod Waveform " + std::to_string(i),
+            juce::StringArray{ "Sine", "Saw", "Square" }, 0));
 
-    parameters.push_back(std::make_unique<juce::AudioParameterChoice>(
-        juce::ParameterID("MOD_WAVEFORM4", 1), "Mod Waveform 4",
-        juce::StringArray{ "Sine", "Saw", "Square" }, 0));
+        parameters.push_back(std::make_unique<juce::AudioParameterChoice>(
+            juce::ParameterID("WAVEFORM" + std::to_string(i), 1), "Waveform " + std::to_string(i),
+            juce::StringArray{ "Sine", "Saw", "Square" }, 0));
+    }
 
     // Step Sequencer Parameters (8 steps)
     for (int i = 0; i < 8; ++i)
@@ -297,6 +412,32 @@ juce::AudioProcessorValueTreeState::ParameterLayout ButterflyAudioProcessor::cre
             "Step " + juce::String(i + 1),
             0.0f, 1.0f, 1.0f));
     }
+    parameters.push_back(std::make_unique<juce::AudioParameterInt>(
+        juce::ParameterID("STEP_COUNT", 1),
+        "Step Count",
+        1, 8, 8));
+    
+    parameters.push_back(std::make_unique<juce::AudioParameterChoice>(
+        juce::ParameterID("RATE", 1),
+        "RATE",
+        juce::StringArray{ "1/2", "1/4", "1/8", "1/16" },
+        2  // default = "1/8"
+    ));
+    
+    parameters.push_back(std::make_unique<juce::AudioParameterBool>(
+        juce::ParameterID("MOD_AMOUNT_ACTIVE", 1),
+        "MOD_AMOUNT_ACTIVE",
+        false));
 
+    parameters.push_back(std::make_unique<juce::AudioParameterBool>(
+        juce::ParameterID("MOD_NUM_ACTIVE", 1),
+        "MOD_NUM_ACTIVE",
+        false));
+
+    parameters.push_back(std::make_unique<juce::AudioParameterBool>(
+        juce::ParameterID("MOD_DEN_ACTIVE", 1),
+        "MOD_DEN_ACTIVE",
+        false));
+    
     return { parameters.begin(), parameters.end() };
 }

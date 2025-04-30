@@ -14,7 +14,8 @@ public:
 
     void updateFromHostPosition(double ppqPosition, double bpm);
     float getCurrentAmplitude() const;
-    int getCurrentStep() const { return currentStep; }
+    int setCurrentStep(int step) { currentStep = step; }
+
 private:
     int numSteps;
     int currentStep = 0;
@@ -27,5 +28,21 @@ private:
     std::vector<std::unique_ptr<juce::Slider>> stepSliders;
     std::vector<std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>> sliderAttachments;
 
+    // New modulation selector (list box)
+    juce::ComboBox rateSelector;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> rateSelectorAttachment;
+    
+    juce::ToggleButton modNumeratorButton;
+    juce::ToggleButton modDenominatorButton;
+    juce::ToggleButton modAmountButton;
+    
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> modAmountAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> modNumeratorAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> modDenominatorAttachment;
+    
+    
+    juce::Slider stepCountSlider;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> stepCountSliderAttachment;
+    
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(StepSequencer)
 };

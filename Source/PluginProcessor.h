@@ -11,6 +11,8 @@
 #include <JuceHeader.h>
 #include "FMVoice.h"
 #include "FMSynth.h"
+#include "AlienWah.h"
+
 //==============================================================================
 /**
 */
@@ -63,11 +65,14 @@ public:
     juce::AudioParameterFloat* modRatioParam4;
     juce::AudioProcessorValueTreeState apvts;
     
+    std::atomic<int> currentStepAtom { 0 };
+    
 private:
     FMSynth synth;
     juce::AudioProcessorValueTreeState::ParameterLayout createParameters();
     
     juce::dsp::Gain<float> gainProcessor;
+    AlienWah alienWah;
 
     
     //==============================================================================
