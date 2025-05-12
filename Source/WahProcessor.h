@@ -1,16 +1,20 @@
 #pragma once
 #include <JuceHeader.h>
 #include <complex>
+#include "DSPModule.h"
 
-class WahProcessor
+class WahProcessor : public DSPModule
 {
 public:
-    WahProcessor();
-    void prepare(double sampleRate, int samplesPerBlock, int maxDelayInSamples);
-    void reset();
+    WahProcessor(juce::AudioProcessorValueTreeState& apvtsRef);
+    ~WahProcessor() override;
+    void prepare(double sampleRate, int samplesPerBlock) override;
+    void reset() override;
     void setParameters(float lfoFreq, float startPhase, float feedbackAmount, int delaySamples);
-    void process(juce::AudioBuffer<float>& buffer);
+    void process(juce::AudioBuffer<float>& buffer) override;
 
+
+    
 private:
     juce::dsp::DelayLine<float> delayLineReal;
     juce::dsp::DelayLine<float> delayLineImag;

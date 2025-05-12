@@ -11,7 +11,7 @@
 #include <JuceHeader.h>
 #include "FMVoice.h"
 #include "FMSynth.h"
-#include "AlienWah.h"
+#include "FXChainProcessor.h"
 
 //==============================================================================
 /**
@@ -71,8 +71,10 @@ private:
     FMSynth synth;
     juce::AudioProcessorValueTreeState::ParameterLayout createParameters();
     
+    FXChainProcessor fxChainProcessor;
+    
     juce::dsp::Gain<float> gainProcessor;
-    AlienWah alienWah;
+//    WahProc alienWah;
 
     
     //==============================================================================
