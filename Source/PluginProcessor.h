@@ -65,8 +65,6 @@ public:
     juce::AudioParameterFloat* modRatioParam4;
     juce::AudioProcessorValueTreeState apvts;
     
-    std::atomic<int> currentStepAtom { 0 };
-    
 private:
     FMSynth synth;
     juce::AudioProcessorValueTreeState::ParameterLayout createParameters();

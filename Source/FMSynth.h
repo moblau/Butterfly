@@ -4,7 +4,9 @@
 class FMSynth : public juce::Synthesiser
 {
 public:
-    void updateSynthParameters(juce::AudioProcessorValueTreeState& apvts, float stepValue);
+    FMSynth(juce::AudioProcessorValueTreeState& apvts);
+
+    void updateSynthParameters();
     
     void syncVoices();
     
@@ -12,4 +14,8 @@ public:
     {
         return dynamic_cast<FMVoice*>(getVoice(index));
     }
+    
+private:
+    juce::AudioProcessorValueTreeState& apvts;
+
 };

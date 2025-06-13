@@ -6,7 +6,7 @@
 class WahProcessor : public DSPModule
 {
 public:
-    WahProcessor(juce::AudioProcessorValueTreeState& apvtsRef);
+    WahProcessor(juce::AudioProcessorValueTreeState& apvtsRef, juce::AudioPlayHead* playHead);
     ~WahProcessor() override;
     void prepare(double sampleRate, int samplesPerBlock) override;
     void reset() override;

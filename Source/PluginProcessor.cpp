@@ -14,15 +14,18 @@ ButterflyAudioProcessor::ButterflyAudioProcessor()
     : AudioProcessor (BusesProperties()
                       .withInput ("Input", juce::AudioChannelSet::stereo(), true)
                       .withOutput("Output", juce::AudioChannelSet::stereo(), true)),
-apvts(*this, nullptr, "PARAMETERS", createParameters()), fxChainProcessor(apvts)
+apvts(*this, nullptr, "PARAMETERS", createParameters()), fxChainProcessor(apvts, getPlayHead()), synth(apvts)
 {
 
-    DBG("TEST");
     // ... repeat for 4 voices
     synth.clearVoices();
-    for (int i = 0; i < 4; ++i) // 8-voice polyphony
-        synth.addVoice(new FMVoice());
+    for (int i = 0; i < 4; ++i)
+    {
+        auto* voice = new FMVoice();
+        synth.addVoice (voice);
 
+        // Now that we're in prepareToPlay, we know sampleRate & blockSize:
+    }
     synth.clearSounds();
     synth.addSound(new FMSound());
     gainProcessor.setRampDurationSeconds(0.2);
@@ -99,6 +102,13 @@ void ButterflyAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBl
 {
     synth.setCurrentPlaybackSampleRate(sampleRate);
     fxChainProcessor.prepare(sampleRate, samplesPerBlock);
+    for (int i = 0; i < synth.getNumVoices(); ++i)
+    {
+        if (auto* voice = dynamic_cast<FMVoice*>(synth.getVoice(i))){
+            voice->setVoiceId(i);
+            voice->prepare(sampleRate, samplesPerBlock);
+        }
+    }
 //    alienWah.prepare(sampleRate, samplesPerBlock, sampleRate); // Allow a reasonable max delay
 //    alienWah.setParameters(0.6f, 0.0f, 0.5f, 20);
 }
@@ -138,44 +148,43 @@ bool ButterflyAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts
 void ButterflyAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
     int currentStep = 0;
-    if (auto* playhead = getPlayHead()){
-        juce::AudioPlayHead::CurrentPositionInfo info;
-        if ( playhead->getCurrentPosition(info)){
-            int stepCount = static_cast<int>(*apvts.getRawParameterValue("STEP_COUNT"));
-            
-            int rateIndex = static_cast<int>(*apvts.getRawParameterValue("RATE")); // 0 = 1/2, 1 = 1/4, etc.
-
-            double beatLength = 0.25; // fallback
-            switch (rateIndex)
-            {
-                case 0: beatLength = 2.0; break;   // "1/2"
-                case 1: beatLength = 1.0; break;   // "1/4"
-                case 2: beatLength = 0.5; break;   // "1/8"
-                case 3: beatLength = 0.25; break;  // "1/16"
-                default: break;
-            }
-            
-            double seqLengthInBeats = stepCount * beatLength;
-            if (seqLengthInBeats > 0.0)
-            {
-                double beatInLoop = std::fmod(info.ppqPosition, seqLengthInBeats);
-                currentStep = static_cast<int>(beatInLoop/beatLength);
-                currentStepAtom.store(currentStep);
-                
-            }
-        }
-    }
-    
+//    if (auto* playhead = getPlayHead()){
+//        juce::AudioPlayHead::CurrentPositionInfo info;
+//        if ( playhead->getCurrentPosition(info)){
+//            int stepCount = static_cast<int>(*apvts.getRawParameterValue("seq1STEP_COUNT"));
+//            
+//            int rateIndex = static_cast<int>(*apvts.getRawParameterValue("seq1RATE")); // 0 = 1/2, 1 = 1/4, etc.
+//
+//            double beatLength = 0.25; // fallback
+//            switch (rateIndex)
+//            {
+//                case 0: beatLength = 2.0; break;   // "1/2"
+//                case 1: beatLength = 1.0; break;   // "1/4"
+//                case 2: beatLength = 0.5; break;   // "1/8"
+//                case 3: beatLength = 0.25; break;  // "1/16"
+//                default: break;
+//            }
+//            
+//            double seqLengthInBeats = stepCount * beatLength;
+//            if (seqLengthInBeats > 0.0)
+//            {
+//                double beatInLoop = std::fmod(info.ppqPosition, seqLengthInBeats);
+//                currentStep = static_cast<int>(beatInLoop/beatLength);
+//            }
+//        }
+//    }
     
     buffer.clear(); // Clear buffer before processing
     
-
-    float stepValue = *apvts.getRawParameterValue("step" + juce::String(currentStep));  // Access the value of the current step
+//    int currentStep1 = static_cast<int>(*apvts.getRawParameterValue("seq1CURRENT_STEP"));
+//    
+//    
+//    float stepValue1 = *apvts.getRawParameterValue("seq1step" + juce::String(currentStep1));  // Access the value of the current step
     
-
-    synth.updateSynthParameters(apvts, stepValue);
+    juce::MidiBuffer midiCopy(midiMessages);
+    synth.updateSynthParameters();
     synth.renderNextBlock(buffer, midiMessages, 0, buffer.getNumSamples());
-    fxChainProcessor.process(buffer);
+    fxChainProcessor.process(buffer, midiCopy );
 
     
     
@@ -232,6 +241,10 @@ juce::AudioProcessorValueTreeState::ParameterLayout ButterflyAudioProcessor::cre
 //    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("DETUNE4", 1), "Detune 4", -0.5f, 0.5f, 0.0f));
 
     // Modulation Ratio Numerator and Denominator (1 to 16)
+    
+    
+    //use emplace back vs push back
+    //use reserve to allocate how many parameters.
     for (int i = 1; i <= 4; ++i)
     {
         parameters.push_back(std::make_unique<juce::AudioParameterInt>(
@@ -269,39 +282,69 @@ juce::AudioProcessorValueTreeState::ParameterLayout ButterflyAudioProcessor::cre
     }
 
     // Step Sequencer Parameters (8 steps)
-    for (int i = 0; i < 8; ++i)
+    for (int j = 1; j <= 4; ++j)
     {
-        parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
-            juce::ParameterID("step" + juce::String(i), 1),
-            "Step " + juce::String(i + 1),
-            0.0f, 1.0f, 1.0f));
+        for (int i = 0; i < 8; ++i)
+        {
+            parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
+                juce::ParameterID("seq" + juce::String(j) + "step" + juce::String(i), 1),
+                "seq" + juce::String(j) + "step" + juce::String(i),
+                0.0f, 1.0f, 1.0f));
+            parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
+                juce::ParameterID("seq" + juce::String(j) + "offset" + juce::String(i), 1),
+                "seq" + juce::String(j) + "offset" + juce::String(i),
+                -.5f, 0.5f, .01f));
+        }
     }
-    parameters.push_back(std::make_unique<juce::AudioParameterInt>(
-        juce::ParameterID("STEP_COUNT", 1),
-        "Step Count",
-        1, 8, 8));
-    
-    parameters.push_back(std::make_unique<juce::AudioParameterChoice>(
-        juce::ParameterID("RATE", 1),
-        "RATE",
-        juce::StringArray{ "1/2", "1/4", "1/8", "1/16" },
-        2  // default = "1/8"
-    ));
-    
-    parameters.push_back(std::make_unique<juce::AudioParameterBool>(
-        juce::ParameterID("MOD_AMOUNT_ACTIVE", 1),
-        "MOD_AMOUNT_ACTIVE",
-        false));
 
-    parameters.push_back(std::make_unique<juce::AudioParameterBool>(
-        juce::ParameterID("MOD_NUM_ACTIVE", 1),
-        "MOD_NUM_ACTIVE",
-        false));
+    
+    for (int j = 1; j <= 4; ++j)
+    {
+        parameters.push_back(std::make_unique<juce::AudioParameterInt>(
+            juce::ParameterID("seq" + juce::String(j) + "STEP_COUNT", 1),
+            "seq" + juce::String(j) + "STEP_COUNT",
+            1, 8, 8));
 
-    parameters.push_back(std::make_unique<juce::AudioParameterBool>(
-        juce::ParameterID("MOD_DEN_ACTIVE", 1),
-        "MOD_DEN_ACTIVE",
-        false));
+        parameters.push_back(std::make_unique<juce::AudioParameterChoice>(
+            juce::ParameterID("seq" + juce::String(j) + "RATE", 1),
+            "seq" + juce::String(j) + "RATE",
+            juce::StringArray{
+                "4/1", "2/1", "1/1",
+                "1/2", "1/2T", "1/2.",
+                "1/4", "1/4T", "1/4.",
+                "1/8", "1/8T", "1/8.",
+                "1/16", "1/16T", "1/16.",
+                "1/32", "1/32T", "1/32."
+            },
+            2 // default index: "1/1"
+        ));
+
+        parameters.push_back(std::make_unique<juce::AudioParameterBool>(
+            juce::ParameterID("seq" + juce::String(j) + "MOD_AMOUNT_ACTIVE", 1),
+            "seq" + juce::String(j) + "MOD_AMOUNT_ACTIVE",
+            false));
+
+        parameters.push_back(std::make_unique<juce::AudioParameterBool>(
+            juce::ParameterID("seq" + juce::String(j) + "MOD_NUM_ACTIVE", 1),
+            "seq" + juce::String(j) + "MOD_NUM_ACTIVE",
+            false));
+
+        parameters.push_back(std::make_unique<juce::AudioParameterBool>(
+            juce::ParameterID("seq" + juce::String(j) + "MOD_DEN_ACTIVE", 1),
+            "seq" + juce::String(j) + "MOD_DEN_ACTIVE",
+            false));
+
+        parameters.push_back(std::make_unique<juce::AudioParameterBool>(
+            juce::ParameterID("seq" + juce::String(j) + "MOD_CARRIER_ACTIVE", 1),
+            "seq" + juce::String(j) + "MOD_CARRIER_ACTIVE",
+            false));
+        
+        parameters.push_back(std::make_unique<juce::AudioParameterInt>(
+            juce::ParameterID("seq" + juce::String(j) + "CURRENT_STEP", 1),
+           "seq" + juce::String(j) + "CURRENT_STEP",
+            0, 7, 0));
+    }
+    
     parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID("wahFreq", 1), "wahFreq", 1.0f, 50.0f, 10.0f));
     
@@ -310,6 +353,62 @@ juce::AudioProcessorValueTreeState::ParameterLayout ButterflyAudioProcessor::cre
     
     parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID("wahDelay", 1), "wahDelay", 5.0f, 50.0f, 20.0f));
+    
+    
+    parameters.push_back(std::make_unique<juce::AudioParameterBool>(
+        juce::ParameterID("WahUseSync", 1),                 // ID
+      "WahUseSync",                     // UI name
+        false));                        // default = false (use free freq)
+
+    // 2) Choice for sync rate (quarter, eighth, sixteenth, etc.)
+    juce::StringArray syncChoices { "1/4", "1/8", "1/16", "1/32" };
+    parameters.push_back(std::make_unique<juce::AudioParameterChoice>(
+          juce::ParameterID("WahSyncRate", 1),                // ID
+        "WahSyncRate",                    // UI name
+        syncChoices,
+        1));
+    
+    for (int i = 1; i <= 4; ++i)
+    {
+        auto paramName = std::to_string(i) + "AliasToggle";
+
+        parameters.push_back(std::make_unique<juce::AudioParameterBool>(
+            juce::ParameterID(paramName, 1),  // e.g. "1AliasToggle", "2AliasToggle", …
+            paramName,                       // e.g. "1 AliasToggle", "2 AliasToggle", …
+            false
+        ));
+    }
+    
+    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID("res_feedback", 1), "res_feedback", 0.0f, 1.0f, 0.0f));
+    
+    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID("res_drywet", 1), "res_drywet", 0.0f, 1.0f, 0.0f));
+    
+    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID("res_ratio", 1), "res_drywet", 1.0f, 4.0f, 1.0f));
+    
+    
+    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID("res_filterfreq", 1), "res_filterfreq", 20.0f,22000.0f, 1000.0f));
+    
+    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID("filter_freq", 1),
+        "filter_freq",
+        juce::NormalisableRange<float>(20.0f, 22000.0f, 0.01f, 0.25f), // Skewed for perceptual tuning
+        1000.0f));
+
+    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID("filter_res", 1),
+        "filter_res",
+        juce::NormalisableRange<float>(0.1f, 3.0, 0.01f),
+        1.0f));
+
+    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID("filter_drive", 1),
+        "filter_drive",
+        juce::NormalisableRange<float>(1.0f, 4.0f, 1.0f),
+        1.0f));
     
     return { parameters.begin(), parameters.end() };
 }

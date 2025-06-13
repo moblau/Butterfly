@@ -8,15 +8,29 @@
       <GROUP id="{82BC2639-C5F3-0956-BAC6-E9EE87CD6B9E}" name="DSP">
         <FILE id="Pho232" name="DSPModule.cpp" compile="1" resource="0" file="Source/DSPModule.cpp"/>
         <FILE id="mBHrwV" name="DSPModule.h" compile="0" resource="0" file="Source/DSPModule.h"/>
+        <FILE id="G3fMoO" name="Filter.cpp" compile="1" resource="0" file="Source/Filter.cpp"/>
+        <FILE id="qPLXkx" name="Filter.h" compile="0" resource="0" file="Source/Filter.h"/>
         <FILE id="GitaIa" name="FXChainProcessor.cpp" compile="1" resource="0"
               file="Source/FXChainProcessor.cpp"/>
         <FILE id="IeRZCw" name="FXChainProcessor.h" compile="0" resource="0"
               file="Source/FXChainProcessor.h"/>
+        <FILE id="RNBlh5" name="ResonatorProcessor.cpp" compile="1" resource="0"
+              file="Source/ResonatorProcessor.cpp"/>
+        <FILE id="Mx0tio" name="ResonatorProcessor.h" compile="0" resource="0"
+              file="Source/ResonatorProcessor.h"/>
         <FILE id="zTuGrE" name="WahProcessor.cpp" compile="1" resource="0"
               file="Source/WahProcessor.cpp"/>
         <FILE id="tPQ3cE" name="WahProcessor.h" compile="0" resource="0" file="Source/WahProcessor.h"/>
       </GROUP>
       <GROUP id="{6AB513EF-23B5-A912-A7A6-0C7D0D53FA8C}" name="UI">
+        <FILE id="joIHNE" name="FilterComponent.cpp" compile="1" resource="0"
+              file="Source/FilterComponent.cpp"/>
+        <FILE id="jQDoLZ" name="FilterComponent.h" compile="0" resource="0"
+              file="Source/FilterComponent.h"/>
+        <FILE id="AjEy53" name="ResonatorComponent.cpp" compile="1" resource="0"
+              file="Source/ResonatorComponent.cpp"/>
+        <FILE id="ZYXYwx" name="ResonatorComponent.h" compile="0" resource="0"
+              file="Source/ResonatorComponent.h"/>
         <FILE id="oa1hZT" name="FXUnit.cpp" compile="1" resource="0" file="Source/FXUnit.cpp"/>
         <FILE id="g17Prq" name="FXUnit.h" compile="0" resource="0" file="Source/FXUnit.h"/>
         <FILE id="nBUrqB" name="FXChainComponent.cpp" compile="1" resource="0"
@@ -27,6 +41,10 @@
               file="Source/WahComponent.cpp"/>
         <FILE id="trHlCQ" name="WahComponent.h" compile="0" resource="0" file="Source/WahComponent.h"/>
       </GROUP>
+      <FILE id="tip2Pt" name="VoiceTabComponent.cpp" compile="1" resource="0"
+            file="Source/VoiceTabComponent.cpp"/>
+      <FILE id="tznLEk" name="VoiceTabComponent.h" compile="0" resource="0"
+            file="Source/VoiceTabComponent.h"/>
       <FILE id="cOf4hl" name="SmoothDownsampler.cpp" compile="1" resource="0"
             file="Source/SmoothDownsampler.cpp"/>
       <FILE id="XtD4UD" name="SmoothDownsampler.h" compile="0" resource="0"

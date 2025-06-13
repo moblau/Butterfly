@@ -4,7 +4,7 @@
 
 class DSPModule {
 public:
-    DSPModule(juce::AudioProcessorValueTreeState& apvtsRef) : apvts(apvtsRef) {}
+    DSPModule(juce::AudioProcessorValueTreeState& apvtsRef,juce::AudioPlayHead* playHead) : apvts(apvtsRef), playHead(playHead) {}
     virtual ~DSPModule() = default;
 
     virtual void prepare(double sampleRate, int samplesPerBlock) = 0;
@@ -13,6 +13,7 @@ public:
 
 protected:
     juce::AudioProcessorValueTreeState& apvts;
+    juce::AudioPlayHead* playHead = nullptr;
 };
 
 //class DSPModule

@@ -5,7 +5,7 @@
 #include "StepSequencer.h"
 #include "VoiceEditor.h"
 #include "FXChainComponent.h"
-
+#include "VoiceTabComponent.h"
 class ButterflyAudioProcessorEditor  : public juce::AudioProcessorEditor, public juce::Timer
 {
 public:
@@ -20,10 +20,18 @@ public:
 private:
     ButterflyAudioProcessor& audioProcessor;
     
-    VoiceEditor voiceEditor1, voiceEditor2, voiceEditor3, voiceEditor4;
-
-
-    StepSequencer stepSequencer;
+//    VoiceEditor voiceEditor1, voiceEditor2, voiceEditor3, voiceEditor4;
+//
+//
+//    StepSequencer stepSequencer1;
+//    StepSequencer stepSequencer2;
+//    StepSequencer stepSequencer3;
+//    StepSequencer stepSequencer4;
+    
+    juce::TabbedComponent voiceTabs { juce::TabbedButtonBar::TabsAtTop };
+    VoiceTabComponent voiceTab1, voiceTab2, voiceTab3, voiceTab4;
+    
+//    juce::TabbedComponent tabbedSeq {juce::TabbedButtonBar::TabsAtTop};
     FXChainComponent fxChainComponent;
     
     void setupSlider(juce::Slider& slider, juce::Slider::SliderStyle style = juce::Slider::LinearHorizontal);

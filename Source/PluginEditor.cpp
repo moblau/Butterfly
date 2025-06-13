@@ -2,15 +2,29 @@
 #include "PluginEditor.h"
 
 //==============================================================================
+//ButterflyAudioProcessorEditor::ButterflyAudioProcessorEditor (ButterflyAudioProcessor& p)
+//: AudioProcessorEditor (&p), audioProcessor (p),
+//  stepSequencer1(8, 1,audioProcessor.apvts),
+//  stepSequencer2(8, 2,audioProcessor.apvts),
+//  stepSequencer3(8, 3,audioProcessor.apvts),
+//  stepSequencer4(8, 4, audioProcessor.apvts),
+//  voiceEditor1(p.apvts, "1"),
+//  voiceEditor2(p.apvts, "2"),
+//  voiceEditor3(p.apvts, "3"),
+//  voiceEditor4(p.apvts, "4"), fxChainComponent(p.apvts)
+//{
 ButterflyAudioProcessorEditor::ButterflyAudioProcessorEditor (ButterflyAudioProcessor& p)
 : AudioProcessorEditor (&p), audioProcessor (p),
-  stepSequencer(8, audioProcessor.apvts, "step"),
+  stepSequencer1(8, 1,audioProcessor.apvts),
+  stepSequencer2(8, 2,audioProcessor.apvts),
+  stepSequencer3(8, 3,audioProcessor.apvts),
+  stepSequencer4(8, 4, audioProcessor.apvts),
   voiceEditor1(p.apvts, "1"),
   voiceEditor2(p.apvts, "2"),
   voiceEditor3(p.apvts, "3"),
   voiceEditor4(p.apvts, "4"), fxChainComponent(p.apvts)
 {
-    setSize (1500, 1000);
+    setSize (1000, 800);
 
     auto& params = audioProcessor.apvts;
 
@@ -19,7 +33,15 @@ ButterflyAudioProcessorEditor::ButterflyAudioProcessorEditor (ButterflyAudioProc
     addAndMakeVisible(voiceEditor2);
     addAndMakeVisible(voiceEditor3);
     addAndMakeVisible(voiceEditor4);
-    addAndMakeVisible(stepSequencer);
+    
+    tabbedSeq.addTab ("Seq1", juce::Colours::transparentBlack, &stepSequencer1, false);
+    tabbedSeq.addTab ("Seq1", juce::Colours::transparentBlack, &stepSequencer1, false);
+    tabbedSeq.addTab ("Seq2", juce::Colours::transparentBlack, &stepSequencer2, false);
+    tabbedSeq.addTab ("Seq3", juce::Colours::transparentBlack, &stepSequencer3, false);
+    tabbedSeq.addTab ("Seq4", juce::Colours::transparentBlack, &stepSequencer4, false);
+    
+    addAndMakeVisible(tabbedSeq);
+//    addAndMakeVisible(stepSequencer);
     startTimer(10);
     
 }
@@ -42,25 +64,33 @@ void ButterflyAudioProcessorEditor::resized()
     int columnHeight = getHeight() - 200;
     // Reserve the bottom area for the step sequencer (e.g., 150 pixels high)
     auto totalArea = getLocalBounds();
-    auto sequencerArea = totalArea.removeFromBottom(150);
+    auto sequencerArea = totalArea.removeFromBottom(250);
     auto fxChainArea = totalArea.removeFromRight(columnWidth);
     fxChainComponent.setBounds(fxChainArea);
     voiceEditor1.setBounds(margin + columnWidth * 0, margin, columnWidth, columnHeight);
     voiceEditor2.setBounds(margin + columnWidth * 1, margin, columnWidth, columnHeight);
     voiceEditor3.setBounds(margin + columnWidth * 2, margin, columnWidth, columnHeight);
     voiceEditor4.setBounds(margin + columnWidth * 3, margin, columnWidth, columnHeight);
-
+    
+    tabbedSeq.setBounds(sequencerArea.getX() + margin, sequencerArea.getY(), sequencerArea.getWidth() - margin * 2, sequencerArea.getHeight());
     
 
     // Layout the step sequencer at the bottom of the window
-    stepSequencer.setBounds(sequencerArea.getX() + margin, sequencerArea.getY(), sequencerArea.getWidth() - margin * 2, sequencerArea.getHeight());
+//    stepSequencer.setBounds(sequencerArea.getX() + margin, sequencerArea.getY(), sequencerArea.getWidth() - margin * 2, sequencerArea.getHeight());
 }
 
 void ButterflyAudioProcessorEditor::timerCallback()
 {
-    int step = audioProcessor.currentStepAtom.load();
-    // Pass the value to the StepSequencer
-    stepSequencer.setCurrentStep(step);
-    // Optionally repaint if needed.
-    stepSequencer.repaint();
+    if (auto* playhead = audioProcessor.getPlayHead())
+    {
+        juce::AudioPlayHead::CurrentPositionInfo info;
+        if (playhead->getCurrentPosition(info))
+        {
+            stepSequencer1.updateFromHostPosition(info.ppqPosition, info.bpm);
+            stepSequencer2.updateFromHostPosition(info.ppqPosition, info.bpm);
+            stepSequencer3.updateFromHostPosition(info.ppqPosition, info.bpm);
+            stepSequencer4.updateFromHostPosition(info.ppqPosition, info.bpm);
+        }
+    }
+    stepSequencer1.repaint();
 }

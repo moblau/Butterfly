@@ -19,6 +19,10 @@ private:
 
     void setupSlider(juce::Slider& slider);
     void setupComboBox(juce::ComboBox& box);
-
+    juce::ToggleButton aliasToggle;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> aliasToggleAttachment;
+    
+    void toggleAlias();
+    bool shouldAlias = false;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (VoiceEditor)
 };

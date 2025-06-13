@@ -19,7 +19,16 @@ VoiceEditor::VoiceEditor(juce::AudioProcessorValueTreeState& apvts, const juce::
     downsampleAttach = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(apvts,  "DOWNSAMPLE"+voicePrefix, downsampleSlider);
     modWaveformAttach = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(apvts,  "MOD_WAVEFORM"+voicePrefix, modWaveformBox);
     waveformAttach = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(apvts,  "WAVEFORM"+voicePrefix, waveformBox);
+    
+    aliasToggle.setButtonText("Alias");
+    
+    addAndMakeVisible(aliasToggle);
+
+    aliasToggleAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(apvts,  voicePrefix+"AliasToggle", aliasToggle);
+
+    
 }
+
 
 void VoiceEditor::setupSlider(juce::Slider& slider)
 {
@@ -63,6 +72,7 @@ void VoiceEditor::resized()
 
     modRatioDenSlider.setBounds(area.removeFromTop(controlHeight));
     downsampleSlider.setBounds(area.removeFromTop(controlHeight));
+    aliasToggle.setBounds(area.removeFromTop(controlHeight));
 }
 
 void updateSynthParameters(juce::AudioProcessorValueTreeState& apvts, float stepValue);

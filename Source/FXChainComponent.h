@@ -2,6 +2,8 @@
 #include <JuceHeader.h>
 #include "FXUnit.h"
 #include "WahComponent.h"
+#include "ResonatorComponent.h"
+#include "FilterComponent.h"
 
 class FXChainComponent : public juce::Component
 {

@@ -4,5 +4,9 @@
 class FXUnit : public juce::Component
 {
 public:
-    FXUnit() {}
+    FXUnit(juce::AudioProcessorValueTreeState& apvtsRef);
+    
+private:
+    juce::AudioProcessorValueTreeState& apvts;
+
 };
