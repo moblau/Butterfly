@@ -35,9 +35,9 @@ public:
     void setVoiceId(int id) { voiceId = id; }
     int getVoiceId() const { return voiceId; }
     void setAlias(bool newAliasStaate);
+    void setEnvelopeParams(const juce::ADSR::Parameters& newParams);
 
 private:
-    
     int voiceId = -1;
     enum class Waveform { Sine, Saw, Square };
     float getSample(float phase, Waveform wf, bool bandLimited, float dt);

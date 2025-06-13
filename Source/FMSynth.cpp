@@ -4,6 +4,8 @@
 FMSynth::FMSynth(juce::AudioProcessorValueTreeState& apvts) : apvts(apvts){
     //use a look up table for ID's instead of creating string, better to keep the look up table
     //use a seperate file for ID's, make them static.
+    for (int i = 0; i < idSuffix.size(); ++i)
+            idSuffix[i] = juce::String(i);
 }
 void FMSynth::updateSynthParameters()
 {
@@ -11,39 +13,46 @@ void FMSynth::updateSynthParameters()
     {
         if (auto* voice = dynamic_cast<FMVoice*>(getVoice(i)))
         {
+            juce::ADSR::Parameters envParams;
+            envParams.attack  = *apvts.getRawParameterValue("attack" + idSuffix[0]) / 1000.0f;
+            envParams.decay   = *apvts.getRawParameterValue("decay"  + idSuffix[0]) / 1000.0f;
+            envParams.sustain = *apvts.getRawParameterValue("sustain" + idSuffix[0]);
+            envParams.release = *apvts.getRawParameterValue("release" + idSuffix[0]) / 1000.0f;
+
+            voice->setEnvelopeParams(envParams);
             
-            int currentStep = static_cast<int>(*apvts.getRawParameterValue("seq" + juce::String(i+1) + "CURRENT_STEP"));
-            float stepValue = *apvts.getRawParameterValue("seq" + juce::String(i+1) + "step" + juce::String(currentStep));
+            int currentStep = static_cast<int>(*apvts.getRawParameterValue("seq" + idSuffix[i+1] + "CURRENT_STEP"));
+            float stepValue = *apvts.getRawParameterValue("seq" + idSuffix[i+1] + "step" + juce::String(currentStep));
             
-            bool modAmountActive = *apvts.getRawParameterValue("seq" + juce::String(i+1) + "MOD_AMOUNT_ACTIVE");
-            bool modNumActive = *apvts.getRawParameterValue("seq" + juce::String(i+1) + "MOD_NUM_ACTIVE");
-            bool modDenActive = *apvts.getRawParameterValue("seq" + juce::String(i+1) + "MOD_DEN_ACTIVE");
-            bool modGainActive = *apvts.getRawParameterValue("seq" + juce::String(i+1) + "MOD_CARRIER_ACTIVE");
-            bool shouldAlias = *apvts.getRawParameterValue(juce::String(i+1)+"AliasToggle");
+            bool modAmountActive = *apvts.getRawParameterValue("seq" + idSuffix[i+1] + "MOD_AMOUNT_ACTIVE");
+            bool modNumActive = *apvts.getRawParameterValue("seq" + idSuffix[i+1] + "MOD_NUM_ACTIVE");
+            bool modDenActive = *apvts.getRawParameterValue("seq" + idSuffix[i+1] + "MOD_DEN_ACTIVE");
+            bool modGainActive = *apvts.getRawParameterValue("seq" + idSuffix[i+1] + "MOD_CARRIER_ACTIVE");
+            bool shouldAlias = *apvts.getRawParameterValue(idSuffix[i+1]+"AliasToggle");
             float scaledStepRatio = stepValue * 10.0f - 5.0f;
 
-            voice->setPan(*apvts.getRawParameterValue("PAN" + juce::String(i+1)));
+            voice->setPan(*apvts.getRawParameterValue("PAN" + idSuffix[i+1]));
 
-            int baseNumerator = static_cast<int>(*apvts.getRawParameterValue("MOD_RATIO_NUM" + juce::String(i+1)));
+            int baseNumerator = static_cast<int>(*apvts.getRawParameterValue("MOD_RATIO_NUM" + idSuffix[i+1]));
             int modNumerator = baseNumerator + (modNumActive ? static_cast<int>(scaledStepRatio) : 0);
             modNumerator = juce::jlimit(1, 5, modNumerator);
 
-            int baseDenominator = static_cast<int>(*apvts.getRawParameterValue("MOD_RATIO_DEN" + juce::String(i+1)));
+            int baseDenominator = static_cast<int>(*apvts.getRawParameterValue("MOD_RATIO_DEN" + idSuffix[i+1]));
             int modDenominator = baseDenominator + (modDenActive ? static_cast<int>(scaledStepRatio) : 0);
             modDenominator = juce::jlimit(1, 5, modDenominator);
 
             voice->setModulationRatio(modNumerator, modDenominator);
 
-            float baseIndex = *apvts.getRawParameterValue("MOD_INDEX" + juce::String(i+1));
+            float baseIndex = *apvts.getRawParameterValue("MOD_INDEX" + idSuffix[i+1]);
             float scaledStepModAmt = stepValue * 100.0f - 50.0f;
             float modIndex = baseIndex + (modAmountActive ? scaledStepModAmt : 0.0f);
             modIndex = juce::jlimit(0.0f, 50.0f, modIndex);
 
             voice->setModulationIndex(modIndex);
-            voice->setModulatorWaveform(static_cast<int>(*apvts.getRawParameterValue("MOD_WAVEFORM" + juce::String(i+1))));
-            voice->setDetune(*apvts.getRawParameterValue("DETUNE" + juce::String(i+1)));
-            voice->setWaveform(static_cast<int>(*apvts.getRawParameterValue("WAVEFORM" + juce::String(i+1))));
-            voice->setDownsampleFactor(static_cast<int>(*apvts.getRawParameterValue("DOWNSAMPLE" + juce::String(i+1))));
+            voice->setModulatorWaveform(static_cast<int>(*apvts.getRawParameterValue("MOD_WAVEFORM" + idSuffix[i+1])));
+            voice->setDetune(*apvts.getRawParameterValue("DETUNE" + idSuffix[i+1]));
+            voice->setWaveform(static_cast<int>(*apvts.getRawParameterValue("WAVEFORM" + idSuffix[i+1])));
+            voice->setDownsampleFactor(static_cast<int>(*apvts.getRawParameterValue("DOWNSAMPLE" + idSuffix[i+1])));
             voice->setGain(stepValue);
             voice->setAlias(shouldAlias);
         }

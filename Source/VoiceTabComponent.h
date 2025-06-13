@@ -16,7 +16,7 @@ public:
     void resized() override
     {
         auto area = getLocalBounds();
-        auto voiceArea = area.removeFromTop(area.getHeight() * 0.6); // adjust ratio
+        auto voiceArea = area.removeFromTop(area.getHeight() * 0.8); // adjust ratio
         voiceEditor.setBounds(voiceArea);
         sequencer.setBounds(area);
     }

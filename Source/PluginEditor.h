@@ -6,6 +6,7 @@
 #include "VoiceEditor.h"
 #include "FXChainComponent.h"
 #include "VoiceTabComponent.h"
+#include "ModulationComponent.h"
 class ButterflyAudioProcessorEditor  : public juce::AudioProcessorEditor, public juce::Timer
 {
 public:
@@ -28,8 +29,9 @@ private:
 //    StepSequencer stepSequencer3;
 //    StepSequencer stepSequencer4;
     
-    juce::TabbedComponent voiceTabs { juce::TabbedButtonBar::TabsAtTop };
+    juce::TabbedComponent tabs { juce::TabbedButtonBar::TabsAtTop };
     VoiceTabComponent voiceTab1, voiceTab2, voiceTab3, voiceTab4;
+    ModulationComponent modTab;
     
 //    juce::TabbedComponent tabbedSeq {juce::TabbedButtonBar::TabsAtTop};
     FXChainComponent fxChainComponent;

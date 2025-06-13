@@ -11,9 +11,12 @@ void FMVoice::prepare(double sampleRate, int samplesPerBlock){
     spec.numChannels      = 1;
 //    delayLine.prepare(spec);
 //    delayLine.setMaximumDelayInSamples(44100);
-    envParams.attack  = 0.01f;  // 10 ms
-    envParams.release = .5f;  // 20 ms
+    envParams.attack  = 1.0f;  // 10 ms
+    envParams.release = 5;  // 20 ms
+    envParams.sustain = 1.0;  // 20 ms
+    envParams.decay = 1;  // 20 ms
     env.setParameters(envParams);
+    env.setSampleRate(sampleRate);
     env.reset();
     oversampling->reset();
     oversampling->initProcessing(static_cast<size_t> (spec.maximumBlockSize));
@@ -28,6 +31,7 @@ bool FMVoice::canPlaySound(juce::SynthesiserSound* sound)
 void FMVoice::startNote(int midiNoteNumber, float velocity,
                         juce::SynthesiserSound* /*sound*/, int /*currentPitchWheelPosition*/)
 {
+    env.reset();
     env.noteOn();
     baseFrequency = juce::MidiMessage::getMidiNoteInHertz(midiNoteNumber);
     carrierFrequency = baseFrequency * detuneRatio;
@@ -36,113 +40,35 @@ void FMVoice::startNote(int midiNoteNumber, float velocity,
     this->midiNoteNumber = midiNoteNumber;
     phase = 0.0f;
     modPhase = 0.0f;
-    level = velocity / 127.0f * 10.0f;
+//    level = velocity / 127.0f * 10.0f;
+    level = .1;
+    
     pan = 0.5f;
 //    delayLine.reset();
 }
 
 void FMVoice::stopNote(float /*velocity*/, bool allowTailOff)
 {
-    if (allowTailOff){
-//        clearCurrentNote();
-//        carrierFrequency = 0;
-        env.noteOff();
+    if (allowTailOff)
+    {
+        env.noteOff();  // trigger release phase
+    }
+    else
+    {
+        clearCurrentNote();
+//        carrierFrequency = 0.0f;
     }
 }
 
 void FMVoice::pitchWheelMoved(int) {}
 void FMVoice::controllerMoved(int, int) {}
 
-//void FMVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer, int startSample, int numSamples)
-//{
-//    if (carrierFrequency == 0.0f)
-//        return;
-//
-//    juce::dsp::AudioBlock<float> outputBlock(outputBuffer);
-//    auto subBlock = outputBlock.getSubBlock((size_t)startSample, (size_t)numSamples);
-//
-//    // Get a scratch buffer to hold oversampled samples
-//    juce::dsp::AudioBlock<float> oversampledBlock = oversampling->processSamplesUp(subBlock);
-//
-//
-//    auto freq          = juce::MidiMessage::getMidiNoteInHertz(midiNoteNumber);
-////    auto delayInSamples = static_cast<float>(getSampleRate()) / freq;
-////    delayLine.setDelay(delayInSamples);
-//
-////    constexpr float feedbackGain = 0.9f;
-//    float leftGain  = std::cos(pan * juce::MathConstants<float>::pi * 0.5f);
-//    float rightGain = std::sin(pan * juce::MathConstants<float>::pi * 0.5f);
-//
-//    const float twoPi   = juce::MathConstants<float>::twoPi;
-//    const float invTwoPi = 1.0f / twoPi;
-//    float sampleRate = static_cast<float>(getSampleRate());
-//
-//    for (int i = 0; i < numSamples; ++i)
-//    {
-//        // 1) Compute raw modulator phase normalized to [0..1)
-//        float tMod = modPhase * invTwoPi;
-//        if (tMod >= 1.0f)   tMod -= std::floor(tMod);
-//        if (tMod < 0.0f)    tMod += std::ceil(-tMod);
-//
-//        // 2) Get modulator sample (no band-limiting on modulator)
-//        float rawMod = getSample(tMod, modWaveform, false, 0.0f);
-//        modSignal = rawMod * modulationIndex;
-//
-//        // 3) Form warped carrier phase
-//        float warpedPhase = phase + modSignal;
-//        if (warpedPhase >= twoPi) warpedPhase -= twoPi;
-//        else if (warpedPhase < 0.0f) warpedPhase += twoPi;
-//
-//        // 4) Compute normalized t for current and previous warped phase
-//        float tCurr = warpedPhase * invTwoPi;
-//        if (tCurr >= 1.0f) tCurr -= std::floor(tCurr);
-//        if (tCurr < 0.0f)  tCurr += std::ceil(-tCurr);
-//
-//        float tPrev = prevWarpedPhase * invTwoPi;
-//        if (tPrev >= 1.0f) tPrev -= std::floor(tPrev);
-//        if (tPrev < 0.0f)  tPrev += std::ceil(-tPrev);
-//
-//        // 5) Compute instantaneous dt (wrap if negative)
-//        float dtInst = tCurr - tPrev;
-//        if (dtInst < 0.0f) dtInst += 1.0f;
-//
-//        // 6) Generate band-limited carrier sample using normalized tCurr and dtInst
-//        float carrierSample = getSample(tCurr, waveform, true, dtInst);
-//
-//        // 7) Apply envelope and level
-//        float envAmp = env.getNextSample();
-//        float output  = carrierSample * level * envAmp;
-//
-//        // 8) Feedback comb
-////        float delayed = delayLine.popSample(0);
-////        float combOut = output + feedbackGain * delayed;
-////        delayLine.pushSample(0, combOut);
-//
-//        // 9) Downsampling or other DSP
-//        output = ds.processSample(output);
-//
-//        // 10) Pan and gain
-//        float outL = output * leftGain * gain;
-//        float outR = output * rightGain * gain;
-//        outputBuffer.addSample(0, startSample + i, outL);
-//        outputBuffer.addSample(1, startSample + i, outR);
-//
-//        // 11) Advance raw phases for next sample
-//        phase    += carrierFrequency * twoPi / sampleRate;
-//        modPhase += modulatorFrequency * twoPi / sampleRate;
-//        if (phase    >= twoPi) phase    -= twoPi;
-//        if (modPhase >= twoPi) modPhase -= twoPi;
-//
-//        // 12) Store current warpedPhase for next iteration
-//        prevWarpedPhase = warpedPhase;
-//    }
-//}
 void FMVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
                               int startSample,
                               int numSamples)
 {
-    if (carrierFrequency == 0.0f)
-        return;
+//    if (carrierFrequency == 0.0f)
+//        return;
 
     // Wrap the output buffer for DSP and carve out our slice
     juce::AudioBuffer<float> tempBuf(outputBuffer.getNumChannels(), numSamples);
@@ -201,16 +127,19 @@ void FMVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
         float carrierSample = getSample(tCurr, waveform, true, dtInst);
 
         // 7) envelope + level
-        float envAmp = env.getNextSample();
-        float out    = carrierSample * level * envAmp;
-
+//        float envAmp = env.getNextSample();
+        float out    = carrierSample * level;
+        
         // 8) any other DSP (your ds)
         out = ds.processSample(out);
 
         // 9) write into oversampled buffer with pan & gain
-        leftOS[i] = out * leftGain * gain;
+//        leftOS[i] = out * leftGain * gain;
+//        if (rightOS)
+//            rightOS[i] = out * rightGain * gain;
+        leftOS[i] = out * leftGain;
         if (rightOS)
-            rightOS[i] = out * rightGain * gain;
+            rightOS[i] = out * rightGain ;
 
         // 10) advance phases at oversampled rate
         phase    = std::fmod(phase    + carrierFrequency    * twoPi / osSampleRate, twoPi);
@@ -218,9 +147,14 @@ void FMVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
 
         prevWarpedPhase = warped;
     }
-
+    if (!env.isActive())  // wait until silent
+    {
+        clearCurrentNote();
+        carrierFrequency = 0.0f;
+    }
     // Downsample back into the main buffer slice
     oversampling->processSamplesDown(tempBlock);
+    env.applyEnvelopeToBuffer(tempBuf, 0, numSamples);
     for (int ch = 0; ch < outputBuffer.getNumChannels(); ++ch)
     {
         auto* dst = outputBuffer.getWritePointer(ch, startSample);
@@ -348,4 +282,9 @@ float FMVoice::polyBLEP(float t, float dt)
 
 void FMVoice::setAlias(bool newAliasStaate){
     shouldAlias = newAliasStaate;
+}
+void FMVoice::setEnvelopeParams(const juce::ADSR::Parameters& newParams)
+{
+    envParams = newParams;
+    env.setParameters(envParams);
 }

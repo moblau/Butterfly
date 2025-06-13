@@ -19,7 +19,8 @@ ButterflyAudioProcessorEditor::ButterflyAudioProcessorEditor (ButterflyAudioProc
   voiceTab2(audioProcessor.apvts,2),
   voiceTab3(audioProcessor.apvts,3),
   voiceTab4( audioProcessor.apvts,4),
- fxChainComponent(p.apvts)
+  fxChainComponent(p.apvts),
+  modTab(p.apvts)
 {
     setSize (1000, 800);
 
@@ -31,19 +32,20 @@ ButterflyAudioProcessorEditor::ButterflyAudioProcessorEditor (ButterflyAudioProc
 //    addAndMakeVisible(voiceTab3);
 //    addAndMakeVisible(voiceTab4);
 //
-    voiceTabs.addTab("voiceTab1",juce::Colours::transparentBlack, &voiceTab1, false);
-    voiceTabs.addTab("voiceTab2",juce::Colours::transparentBlack, &voiceTab2, false);//    tabbedSeq.addTab ("Seq1", juce::Colours::transparentBlack, &stepSequencer1, false);
+    tabs.addTab("Voice 1",juce::Colours::transparentBlack, &voiceTab1, false);
+    tabs.addTab("Voice 2",juce::Colours::transparentBlack, &voiceTab2, false);//    tabbedSeq.addTab ("Seq1", juce::Colours::transparentBlack, &stepSequencer1, false);
 
-    voiceTabs.addTab("voiceTab3",juce::Colours::transparentBlack, &voiceTab3, false);//    tabbedSeq.addTab ("Seq1", juce::Colours::transparentBlack, &stepSequencer1, false);
+    tabs.addTab("Voice 3",juce::Colours::transparentBlack, &voiceTab3, false);//    tabbedSeq.addTab ("Seq1", juce::Colours::transparentBlack, &stepSequencer1, false);
 
-    voiceTabs.addTab("voiceTab4",juce::Colours::transparentBlack, &voiceTab4, false);
+    tabs.addTab("Voice 4",juce::Colours::transparentBlack, &voiceTab4, false);
+    tabs.addTab("Modulation",juce::Colours::transparentBlack, &modTab, false);
 
 //    tabbedSeq.addTab ("Seq1", juce::Colours::transparentBlack, &stepSequencer1, false);
 //    tabbedSeq.addTab ("Seq2", juce::Colours::transparentBlack, &stepSequencer2, false);
 //    tabbedSeq.addTab ("Seq3", juce::Colours::transparentBlack, &stepSequencer3, false);
 //    tabbedSeq.addTab ("Seq4", juce::Colours::transparentBlack, &stepSequencer4, false);
     
-   addAndMakeVisible(voiceTabs);
+   addAndMakeVisible(tabs);
 //    addAndMakeVisible(stepSequencer);
     startTimer(10);
     
@@ -93,7 +95,7 @@ void ButterflyAudioProcessorEditor::resized()
 
     // Left/center: tabbed voices + sequencer
     auto mainArea = area.reduced(margin);
-    voiceTabs.setBounds(mainArea);
+    tabs.setBounds(mainArea);
 }
 
 //void ButterflyAudioProcessorEditor::timerCallback()
@@ -119,7 +121,7 @@ void ButterflyAudioProcessorEditor::timerCallback()
         if (playhead->getCurrentPosition(info))
         {
             if (auto* current = dynamic_cast<VoiceTabComponent*> (
-                  voiceTabs.getCurrentContentComponent()))
+              tabs.getCurrentContentComponent()))
             {
                 current->sequencer.updateFromHostPosition(info.ppqPosition, info.bpm);
                 current->sequencer.repaint();

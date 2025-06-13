@@ -17,5 +17,5 @@ public:
     
 private:
     juce::AudioProcessorValueTreeState& apvts;
-
+    std::array<juce::String, 5> idSuffix;
 };

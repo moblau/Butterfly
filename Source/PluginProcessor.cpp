@@ -409,6 +409,35 @@ juce::AudioProcessorValueTreeState::ParameterLayout ButterflyAudioProcessor::cre
         "filter_drive",
         juce::NormalisableRange<float>(1.0f, 4.0f, 1.0f),
         1.0f));
-    
+    juce::NormalisableRange<float> envRange { 0.0f, 5000.0f, 1.0f };
+    envRange.setSkewForCentre(500.0f); // midpoint skew
+
+    for (int i = 0; i < 2; ++i)
+    {
+        parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
+            juce::ParameterID("attack" + juce::String(i), 1),
+            "attack" + juce::String(i),
+            envRange,
+            10.0f));
+
+        parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
+            juce::ParameterID("decay" + juce::String(i), 1),
+            "decay" + juce::String(i),
+            envRange,
+            100.0f));
+
+        parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
+            juce::ParameterID("sustain" + juce::String(i), 1),
+            "sustain" + juce::String(i),
+            juce::NormalisableRange<float>(0.0f, 1.0f, 0.01f),
+            1.0f));
+
+        parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
+            juce::ParameterID("release" + juce::String(i), 1),
+            "release" + juce::String(i),
+            envRange,
+            200.0f));
+    }
+
     return { parameters.begin(), parameters.end() };
 }

@@ -41,6 +41,10 @@
               file="Source/WahComponent.cpp"/>
         <FILE id="trHlCQ" name="WahComponent.h" compile="0" resource="0" file="Source/WahComponent.h"/>
       </GROUP>
+      <FILE id="eGghlf" name="ModulationComponent.cpp" compile="1" resource="0"
+            file="Source/ModulationComponent.cpp"/>
+      <FILE id="FOKKnz" name="ModulationComponent.h" compile="0" resource="0"
+            file="Source/ModulationComponent.h"/>
       <FILE id="tip2Pt" name="VoiceTabComponent.cpp" compile="1" resource="0"
             file="Source/VoiceTabComponent.cpp"/>
       <FILE id="tznLEk" name="VoiceTabComponent.h" compile="0" resource="0"
