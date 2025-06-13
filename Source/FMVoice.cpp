@@ -9,8 +9,6 @@ void FMVoice::prepare(double sampleRate, int samplesPerBlock){
     spec.sampleRate       = sampleRate;                        // e.g. 44100.0
     spec.maximumBlockSize = static_cast<juce::uint32> (samplesPerBlock);
     spec.numChannels      = 1;
-//    delayLine.prepare(spec);
-//    delayLine.setMaximumDelayInSamples(44100);
     envParams.attack  = 1.0f;  // 10 ms
     envParams.release = 5;  // 20 ms
     envParams.sustain = 1.0;  // 20 ms
@@ -20,9 +18,8 @@ void FMVoice::prepare(double sampleRate, int samplesPerBlock){
     env.reset();
     oversampling->reset();
     oversampling->initProcessing(static_cast<size_t> (spec.maximumBlockSize));
-    
-    
 }
+
 bool FMVoice::canPlaySound(juce::SynthesiserSound* sound)
 {
     return dynamic_cast<FMSound*> (sound) != nullptr;
@@ -44,20 +41,21 @@ void FMVoice::startNote(int midiNoteNumber, float velocity,
     level = .1;
     
     pan = 0.5f;
+    
 //    delayLine.reset();
 }
 
 void FMVoice::stopNote(float /*velocity*/, bool allowTailOff)
 {
-    if (allowTailOff)
-    {
+//    if (allowTailOff)
+//    {
         env.noteOff();  // trigger release phase
-    }
-    else
-    {
-        clearCurrentNote();
-//        carrierFrequency = 0.0f;
-    }
+//    }
+//    else
+//    {
+//        clearCurrentNote();
+////        carrierFrequency = 0.0f;
+//    }
 }
 
 void FMVoice::pitchWheelMoved(int) {}
@@ -67,19 +65,12 @@ void FMVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
                               int startSample,
                               int numSamples)
 {
-//    if (carrierFrequency == 0.0f)
-//        return;
-
     // Wrap the output buffer for DSP and carve out our slice
     juce::AudioBuffer<float> tempBuf(outputBuffer.getNumChannels(), numSamples);
     tempBuf.clear();
 
     juce::dsp::AudioBlock<float> tempBlock(tempBuf);
     
-//    juce::dsp::AudioBlock<float> outputBlock(outputBuffer);
-//    auto subBlock = outputBlock.getSubBlock((size_t)startSample,
-//                                            (size_t)numSamples);
-
     // Upsample: get an oversampled block we can write into
     auto oversampledBlock = oversampling->processSamplesUp(tempBlock);
 
@@ -127,19 +118,15 @@ void FMVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
         float carrierSample = getSample(tCurr, waveform, true, dtInst);
 
         // 7) envelope + level
-//        float envAmp = env.getNextSample();
-        float out    = carrierSample * level;
+        float out = carrierSample * level;
         
         // 8) any other DSP (your ds)
         out = ds.processSample(out);
 
         // 9) write into oversampled buffer with pan & gain
-//        leftOS[i] = out * leftGain * gain;
-//        if (rightOS)
-//            rightOS[i] = out * rightGain * gain;
         leftOS[i] = out * leftGain;
         if (rightOS)
-            rightOS[i] = out * rightGain ;
+            rightOS[i] = out * rightGain;
 
         // 10) advance phases at oversampled rate
         phase    = std::fmod(phase    + carrierFrequency    * twoPi / osSampleRate, twoPi);
@@ -147,12 +134,11 @@ void FMVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
 
         prevWarpedPhase = warped;
     }
-    if (!env.isActive())  // wait until silent
-    {
-        clearCurrentNote();
-        carrierFrequency = 0.0f;
-    }
+
+
+
     // Downsample back into the main buffer slice
+
     oversampling->processSamplesDown(tempBlock);
     env.applyEnvelopeToBuffer(tempBuf, 0, numSamples);
     for (int ch = 0; ch < outputBuffer.getNumChannels(); ++ch)
@@ -162,6 +148,8 @@ void FMVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
         for (int i = 0; i < numSamples; ++i)
             dst[i] += src[i];  // accumulate voice output
     }
+
+
 }
 
 void FMVoice::resetModPhase() { phaseReset = false; }

@@ -9,9 +9,9 @@ FMSynth::FMSynth(juce::AudioProcessorValueTreeState& apvts) : apvts(apvts){
 }
 void FMSynth::updateSynthParameters()
 {
-    for (int i = 0; i < getNumVoices(); ++i)
+    for (int j = 0; j < getNumVoices(); ++j)
     {
-        if (auto* voice = dynamic_cast<FMVoice*>(getVoice(i)))
+        if (auto* voice = dynamic_cast<FMVoice*>(getVoice(j)))
         {
             juce::ADSR::Parameters envParams;
             envParams.attack  = *apvts.getRawParameterValue("attack" + idSuffix[0]) / 1000.0f;
@@ -20,7 +20,10 @@ void FMSynth::updateSynthParameters()
             envParams.release = *apvts.getRawParameterValue("release" + idSuffix[0]) / 1000.0f;
 
             voice->setEnvelopeParams(envParams);
-            
+            int i = j;
+            if ( i >= 4 ){
+                i=i-4;
+            }
             int currentStep = static_cast<int>(*apvts.getRawParameterValue("seq" + idSuffix[i+1] + "CURRENT_STEP"));
             float stepValue = *apvts.getRawParameterValue("seq" + idSuffix[i+1] + "step" + juce::String(currentStep));
             

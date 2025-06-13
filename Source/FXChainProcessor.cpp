@@ -2,8 +2,8 @@
 
 FXChainProcessor::FXChainProcessor(juce::AudioProcessorValueTreeState& apvtsRef,juce::AudioPlayHead* playHead) : apvts(apvtsRef), playHead(playHead)
 {
-    fxProcessors.push_back(std::make_unique<WahProcessor>(apvtsRef,playHead));
-    fxProcessors.push_back(std::make_unique<ResonatorProcessor>(apvtsRef,playHead));
+//    fxProcessors.push_back(std::make_unique<WahProcessor>(apvtsRef,playHead));
+//    fxProcessors.push_back(std::make_unique<ResonatorProcessor>(apvtsRef,playHead));
 //    fxProcessors.push_back(std::make_unique<Filter>(apvtsRef,playHead));
     //emplace back
 //    fxProcessors.push_back(std::make_unique<ResonatorProcessor>(apvtsRef));

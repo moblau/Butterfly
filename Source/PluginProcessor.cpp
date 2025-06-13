@@ -19,7 +19,7 @@ apvts(*this, nullptr, "PARAMETERS", createParameters()), fxChainProcessor(apvts,
 
     // ... repeat for 4 voices
     synth.clearVoices();
-    for (int i = 0; i < 4; ++i)
+    for (int i = 0; i < 8; ++i)
     {
         auto* voice = new FMVoice();
         synth.addVoice (voice);
@@ -184,7 +184,7 @@ void ButterflyAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
     juce::MidiBuffer midiCopy(midiMessages);
     synth.updateSynthParameters();
     synth.renderNextBlock(buffer, midiMessages, 0, buffer.getNumSamples());
-    fxChainProcessor.process(buffer, midiCopy );
+//    fxChainProcessor.process(buffer, midiCopy );
 
     
     

@@ -70,5 +70,4 @@ private:
     juce::ADSR       env;
     juce::ADSR::Parameters envParams;
     std::unique_ptr<juce::dsp::Oversampling<float>> oversampling;
-    
 };
