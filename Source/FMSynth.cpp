@@ -6,6 +6,7 @@ FMSynth::FMSynth(juce::AudioProcessorValueTreeState& apvts) : apvts(apvts){
     //use a seperate file for ID's, make them static.
     for (int i = 0; i < idSuffix.size(); ++i)
             idSuffix[i] = juce::String(i);
+    setNoteStealingEnabled(true);
 }
 void FMSynth::updateSynthParameters()
 {
@@ -22,8 +23,8 @@ void FMSynth::updateSynthParameters()
             voice->setEnvelopeParams(envParams);
             int i = j;
             if ( i >= 4 ){
-                i=i-4;
-            }
+                i=i%4;
+            } 
             int currentStep = static_cast<int>(*apvts.getRawParameterValue("seq" + idSuffix[i+1] + "CURRENT_STEP"));
             float stepValue = *apvts.getRawParameterValue("seq" + idSuffix[i+1] + "step" + juce::String(currentStep));
             

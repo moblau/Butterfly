@@ -17,7 +17,16 @@ void Filter::prepare(double sampleRate, int samplesPerBlock)
 }
 
 void Filter::reset(){
+    for (auto& channelState : z)
+        std::fill(channelState.begin(), channelState.end(), 0.0);
 }
+
+inline double mapDoubleValue(double& value, double min, double minMap, double slope)
+{
+    // --- bound to limits
+    return minMap + slope * (value - min);
+}
+
 
 void Filter::update()
 {
@@ -27,9 +36,9 @@ void Filter::update()
     
     fc = *freqParam;
     Q  = *resParam;
-    numActivePoles =  juce::jlimit(1, maxPoles, static_cast<int>(*driveParam));
+//    numActivePoles =  juce::jlimit(1, maxPoles, static_cast<int>(*driveParam));
 
-    K = Q;
+    K = mapDoubleValue(Q, 1, 0, 2);
 
     double g = std::tan(2.0 * juce::MathConstants<double>::pi * fc * halfSamplePeriod);
     alpha = g / (1.0 + g);
@@ -55,14 +64,17 @@ void Filter::process(juce::AudioBuffer<float>& buffer)
             double sigma = 0.0;
 
             for (int p = 0; p < numActivePoles; ++p)
-                sigma += z[ch][p];
-            sigma = std::tanh(sigma);
+                sigma += z[ch][p]*beta[p];
+            
+//            sigma = std::tanh(sigma);
+            input*= 1+K;
             double u = alpha0 * (input - K * sigma);
 
             for (int p = 0; p < numActivePoles; ++p)
             {
                 u = z[ch][p] + alpha * (u - z[ch][p]);
-                z[ch][p] = u;
+                double vn = (u-z[ch][p])*alpha;
+                z[ch][p] = u+vn;
             }
 
             channelData[i] = static_cast<float>(z[ch][numActivePoles - 1]);

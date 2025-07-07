@@ -17,7 +17,7 @@ FilterComponent::FilterComponent(juce::AudioProcessorValueTreeState& apvtsRef)
     // --- Dry/Wet Slider ---
     resSlider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
     resSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 20);
-    resSlider.setRange(.5, 3.0, .1);
+    resSlider.setRange(1.0, 3.0, .1);
     addAndMakeVisible(resSlider);
 
     resSliderAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(

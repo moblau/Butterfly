@@ -2,6 +2,11 @@
 
 FMVoice::FMVoice() : ds(0) {
     oversampling.reset(new juce::dsp::Oversampling<float>(2, 4, juce::dsp::Oversampling<float>::filterHalfBandPolyphaseIIR,true,true));
+    quickReleaseEnvParams.attack = 0.0f;     // Instant attack
+    quickReleaseEnvParams.decay = 0.0f;      // No decay
+    quickReleaseEnvParams.sustain = 1.0f;    // Full sustain (until release)
+    quickReleaseEnvParams.release = 0.1;  // Very short release, e.g., 5ms
+    quickReleaseEnv.setParameters(quickReleaseEnvParams);
 }
 
 void FMVoice::prepare(double sampleRate, int samplesPerBlock){
@@ -9,8 +14,8 @@ void FMVoice::prepare(double sampleRate, int samplesPerBlock){
     spec.sampleRate       = sampleRate;                        // e.g. 44100.0
     spec.maximumBlockSize = static_cast<juce::uint32> (samplesPerBlock);
     spec.numChannels      = 1;
-    envParams.attack  = 1.0f;  // 10 ms
-    envParams.release = 5;  // 20 ms
+    envParams.attack  = 0.01f;  // 10 ms
+    envParams.release = 1;  // 20 ms
     envParams.sustain = 1.0;  // 20 ms
     envParams.decay = 1;  // 20 ms
     env.setParameters(envParams);
@@ -18,6 +23,8 @@ void FMVoice::prepare(double sampleRate, int samplesPerBlock){
     env.reset();
     oversampling->reset();
     oversampling->initProcessing(static_cast<size_t> (spec.maximumBlockSize));
+    quickReleaseEnv.setSampleRate(sampleRate);
+    quickReleaseEnv.reset();
 }
 
 bool FMVoice::canPlaySound(juce::SynthesiserSound* sound)
@@ -28,6 +35,7 @@ bool FMVoice::canPlaySound(juce::SynthesiserSound* sound)
 void FMVoice::startNote(int midiNoteNumber, float velocity,
                         juce::SynthesiserSound* /*sound*/, int /*currentPitchWheelPosition*/)
 {
+    isStealing = false;
     env.reset();
     env.noteOn();
     baseFrequency = juce::MidiMessage::getMidiNoteInHertz(midiNoteNumber);
@@ -35,8 +43,12 @@ void FMVoice::startNote(int midiNoteNumber, float velocity,
     modulationRatio = static_cast<float>(modRatioNum) / static_cast<float>(modRatioDen);
     modulatorFrequency = carrierFrequency * modulationRatio;
     this->midiNoteNumber = midiNoteNumber;
-    phase = 0.0f;
-    modPhase = 0.0f;
+//    phase = 0.0f;
+//    modPhase = 0.0f;
+    
+    phase = juce::Random::getSystemRandom().nextFloat() * juce::MathConstants<float>::twoPi;
+    modPhase = juce::Random::getSystemRandom().nextFloat() * juce::MathConstants<float>::twoPi;
+    
 //    level = velocity / 127.0f * 10.0f;
     level = .1;
     
@@ -47,15 +59,18 @@ void FMVoice::startNote(int midiNoteNumber, float velocity,
 
 void FMVoice::stopNote(float /*velocity*/, bool allowTailOff)
 {
-//    if (allowTailOff)
-//    {
+    if (allowTailOff)
+    {
         env.noteOff();  // trigger release phase
-//    }
-//    else
-//    {
-//        clearCurrentNote();
-////        carrierFrequency = 0.0f;
-//    }
+    }
+    else
+    {
+        isStealing = true;
+        DBG("stealing");
+        quickReleaseEnv.reset();
+        quickReleaseEnv.noteOn();
+        quickReleaseEnv.noteOff();
+    }
 }
 
 void FMVoice::pitchWheelMoved(int) {}
@@ -65,6 +80,10 @@ void FMVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
                               int startSample,
                               int numSamples)
 {
+//    if (!isVoiceActive()) && !isStealing) // Only if not active AND not actively stealing
+//           return;
+    if (!isVoiceActive()) // Only if not active AND not actively stealing
+           return;
     // Wrap the output buffer for DSP and carve out our slice
     juce::AudioBuffer<float> tempBuf(outputBuffer.getNumChannels(), numSamples);
     tempBuf.clear();
@@ -133,6 +152,25 @@ void FMVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
         modPhase = std::fmod(modPhase + modulatorFrequency * twoPi / osSampleRate, twoPi);
 
         prevWarpedPhase = warped;
+//        if (isStealing)
+//            
+//            {
+////                quickReleaseEnv.noteOff();
+//                quickReleaseEnv.applyEnvelopeToBuffer(tempBuf, 0, numSamples);
+//                if (!quickReleaseEnv.isActive()) // If quick release is finished
+//                {
+//                    clearCurrentNote(); // Mark voice as free
+//                    isStealing = false; // Reset flag
+//                }
+//            }
+//            else if (!env.isActive()) // Normal release, check if main envelope is finished
+//            {
+//                clearCurrentNote(); // Mark voice as free
+//            }
+        if (!env.isActive()) // Normal release, check if main envelope is finished
+        {
+            clearCurrentNote(); // Mark voice as free
+        }
     }
 
 
@@ -140,7 +178,23 @@ void FMVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
     // Downsample back into the main buffer slice
 
     oversampling->processSamplesDown(tempBlock);
-    env.applyEnvelopeToBuffer(tempBuf, 0, numSamples);
+//    env.applyEnvelopeToBuffer(tempBuf, 0, numSamples);
+//    oversampling->processSamplesDown(tempBlock);
+
+    if (isStealing)
+    {
+        quickReleaseEnv.applyEnvelopeToBuffer(tempBuf, 0, numSamples);
+        if (!quickReleaseEnv.isActive())
+        {
+            clearCurrentNote(); // Voice is free again
+            isStealing = false;
+        }
+    }
+    else
+    {
+        env.applyEnvelopeToBuffer(tempBuf, 0, numSamples);
+    }
+    
     for (int ch = 0; ch < outputBuffer.getNumChannels(); ++ch)
     {
         auto* dst = outputBuffer.getWritePointer(ch, startSample);

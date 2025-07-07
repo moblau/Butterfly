@@ -65,6 +65,9 @@ private:
     float prevWarpedPhase;
     int midiNoteNumber;
     
+    juce::ADSR quickReleaseEnv;
+    juce::ADSR::Parameters quickReleaseEnvParams;
+    bool isStealing = false;
     
     bool shouldAlias = false;
     juce::ADSR       env;

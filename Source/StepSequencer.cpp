@@ -4,6 +4,7 @@ StepSequencer::StepSequencer(int numSteps_, int stepSeqIndex,
                              juce::AudioProcessorValueTreeState& vts)
     : numSteps(numSteps_), parameters(vts)
 {
+    
     // Set up the modulation list box with options.
 //    modulationListBox.addItem("Pan", 1);
 //    modulationListBox.addItem("Detune", 2);
