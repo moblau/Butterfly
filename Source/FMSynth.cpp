@@ -56,6 +56,7 @@ void FMSynth::updateSynthParameters()
             voice->setModulatorWaveform(static_cast<int>(*apvts.getRawParameterValue("MOD_WAVEFORM" + idSuffix[i+1])));
             voice->setDetune(*apvts.getRawParameterValue("DETUNE" + idSuffix[i+1]));
             voice->setWaveform(static_cast<int>(*apvts.getRawParameterValue("WAVEFORM" + idSuffix[i+1])));
+//            DBG(static_cast<int>(*apvts.getRawParameterValue("WAVEFORM" + idSuffix[i+1])));
             voice->setDownsampleFactor(static_cast<int>(*apvts.getRawParameterValue("DOWNSAMPLE" + idSuffix[i+1])));
             voice->setGain(stepValue);
             voice->setAlias(shouldAlias);

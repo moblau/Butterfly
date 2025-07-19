@@ -46,6 +46,6 @@ void FilterComponent::resized()
 
     // Bottom left for drive slider
 //    auto bottomRow = area.removeFromTop(100); // leave room at bottom
-    auto driveWidth = getWidth() / 2;
-    driveSlider.setBounds(area.removeFromLeft(driveWidth));
+//    auto driveWidth = getWidth() / 2;
+//    driveSlider.setBounds(area.removeFromLeft(driveWidth));
 }

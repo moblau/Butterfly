@@ -1,12 +1,14 @@
 #include "FMVoice.h"
 
-FMVoice::FMVoice() : ds(0) {
+FMVoice::FMVoice(juce::AudioProcessorValueTreeState &apvtsRef,juce::AudioPlayHead* playHead, int voiceNum) : ds(0), voiceFilter1(apvtsRef,playHead), voiceFilter2(apvtsRef,playHead) {
     oversampling.reset(new juce::dsp::Oversampling<float>(2, 4, juce::dsp::Oversampling<float>::filterHalfBandPolyphaseIIR,true,true));
     quickReleaseEnvParams.attack = 0.0f;     // Instant attack
     quickReleaseEnvParams.decay = 0.0f;      // No decay
     quickReleaseEnvParams.sustain = 1.0f;    // Full sustain (until release)
     quickReleaseEnvParams.release = 0.1;  // Very short release, e.g., 5ms
     quickReleaseEnv.setParameters(quickReleaseEnvParams);
+    voiceId = voiceNum;
+    voiceFilter1.setVoiceNum(voiceId);
 }
 
 void FMVoice::prepare(double sampleRate, int samplesPerBlock){
@@ -25,6 +27,12 @@ void FMVoice::prepare(double sampleRate, int samplesPerBlock){
     oversampling->initProcessing(static_cast<size_t> (spec.maximumBlockSize));
     quickReleaseEnv.setSampleRate(sampleRate);
     quickReleaseEnv.reset();
+    voiceFilter1.prepare(sampleRate, samplesPerBlock);
+    voiceFilter1.setEnvelopeStatus(false);
+    voiceFilter2.prepare(sampleRate, samplesPerBlock);
+    voiceFilter2.setEnvelopeStatus(true);
+
+
 }
 
 bool FMVoice::canPlaySound(juce::SynthesiserSound* sound)
@@ -38,6 +46,7 @@ void FMVoice::startNote(int midiNoteNumber, float velocity,
     isStealing = false;
     env.reset();
     env.noteOn();
+    voiceFilter2.startADSR();
     baseFrequency = juce::MidiMessage::getMidiNoteInHertz(midiNoteNumber);
     carrierFrequency = baseFrequency * detuneRatio;
     modulationRatio = static_cast<float>(modRatioNum) / static_cast<float>(modRatioDen);
@@ -62,11 +71,11 @@ void FMVoice::stopNote(float /*velocity*/, bool allowTailOff)
     if (allowTailOff)
     {
         env.noteOff();  // trigger release phase
+        voiceFilter2.stopADSR();
     }
     else
     {
         isStealing = true;
-        DBG("stealing");
         quickReleaseEnv.reset();
         quickReleaseEnv.noteOn();
         quickReleaseEnv.noteOff();
@@ -195,6 +204,12 @@ void FMVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
         env.applyEnvelopeToBuffer(tempBuf, 0, numSamples);
     }
     
+    voiceFilter1.update();
+    voiceFilter1.process(tempBuf);
+    
+    voiceFilter2.update();
+    voiceFilter2.process(tempBuf);
+    
     for (int ch = 0; ch < outputBuffer.getNumChannels(); ++ch)
     {
         auto* dst = outputBuffer.getWritePointer(ch, startSample);
@@ -213,6 +228,7 @@ void FMVoice::setPan(float newPan) { pan = juce::jlimit(0.0f, 1.0f, newPan); }
 void FMVoice::setGain(float g){ gain = g;}
 void FMVoice::setWaveform(int waveformId)
 {
+    DBG(waveformId);
     switch (waveformId)
     {
         case 0: waveform = Waveform::Sine; break;
@@ -273,6 +289,7 @@ float FMVoice::getSample(float t, Waveform wf, bool bandLimited, float dt)
             // t ∈ [0..1), convert to [0..2π)
             float angle = t * twoPi;
             return std::sin(angle);
+            DBG("sine");
         }
 
         case Waveform::Saw:
@@ -285,6 +302,7 @@ float FMVoice::getSample(float t, Waveform wf, bool bandLimited, float dt)
                 sample -= polyBLEP(t, dt);
             }
             return sample;
+            DBG("saw");
         }
 
         case Waveform::Square:

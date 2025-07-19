@@ -22,8 +22,8 @@ ButterflyAudioProcessorEditor::ButterflyAudioProcessorEditor (ButterflyAudioProc
   fxChainComponent(p.apvts),
   modTab(p.apvts)
 {
-    setSize (1000, 800);
-
+    setSize (800, 600);
+    setLookAndFeel(&customLookAndFeel);
     auto& params = audioProcessor.apvts;
 
     addAndMakeVisible(fxChainComponent);
@@ -51,10 +51,14 @@ ButterflyAudioProcessorEditor::ButterflyAudioProcessorEditor (ButterflyAudioProc
     
 }
 
-ButterflyAudioProcessorEditor::~ButterflyAudioProcessorEditor() {}
+ButterflyAudioProcessorEditor::~ButterflyAudioProcessorEditor() {
+    setLookAndFeel(nullptr);
+}
 
 void ButterflyAudioProcessorEditor::paint (juce::Graphics& g)
 {
+
+    setColour(juce::ResizableWindow::backgroundColourId, juce::Colours::slategrey);
     g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
 }
 
@@ -105,12 +109,12 @@ void ButterflyAudioProcessorEditor::resized()
 //        juce::AudioPlayHead::CurrentPositionInfo info;
 //        if (playhead->getCurrentPosition(info))
 //        {
-//            stepSequencer1.updateFromHostPosition(info.ppqPosition, info.bpm);
+//            stepSequencer1.updateFromHostPositiƒon(info.ppqPosition, info.bpm);
 //            stepSequencer2.updateFromHostPosition(info.ppqPosition, info.bpm);
 //            stepSequencer3.updateFromHostPosition(info.ppqPosition, info.bpm);
 //            stepSequencer4.updateFromHostPosition(info.ppqPosition, info.bpm);
 //        }
-//    }
+//    }ƒ
 //    stepSequencer1.repaint();
 //}
 void ButterflyAudioProcessorEditor::timerCallback()

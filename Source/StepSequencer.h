@@ -18,7 +18,7 @@ public:
 private:
     int numSteps;
     int currentStep = 0;
-
+    int stepCount;
     int seqIndex;
     juce::AudioProcessorValueTreeState& parameters;
     juce::String paramPrefix;

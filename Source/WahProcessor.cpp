@@ -9,9 +9,9 @@ void WahProcessor::prepare(double sampleRate, int samplesPerBlock)
 {
     sr = sampleRate;
     delayLineReal.prepare({ sampleRate, (juce::uint32)samplesPerBlock, 1 });
-    delayLineReal.setMaximumDelayInSamples(50);
+    delayLineReal.setMaximumDelayInSamples(100);
     delayLineImag.prepare({ sampleRate, (juce::uint32)samplesPerBlock, 1 });
-    delayLineImag.setMaximumDelayInSamples(50);
+    delayLineImag.setMaximumDelayInSamples(100);
     setParameters(10, 0.0f, 0.9f, 50);
 }
 
@@ -58,14 +58,33 @@ void WahProcessor::process(juce::AudioBuffer<float>& buffer)
         //   2 → “1/8”  → one LFO cycle per eighth note   → freq = bpm / 30
         //   3 → “1/16” → one LFO cycle per sixteenth note→ freq = bpm / 15
         //   4 → “1/32” → one LFO cycle per thirty‐second→ freq = bpm / 7.5
-        switch (syncIndex)
-        {
-            case 1:  lfoFreqToUse =  bpm / 60.0f;  break;
-            case 2:  lfoFreqToUse =  bpm / 30.0f;  break;
-            case 3:  lfoFreqToUse =  bpm / 15.0f;  break;
-            case 4:  lfoFreqToUse =  bpm /  7.5f;  break;
-            default: lfoFreqToUse =  bpm / 60.0f;  break;
-        }
+//        DBG(syncIndex);
+//        switch (syncIndex)
+//        {
+//            case 0: lfoFreqToUse = bpm / (60.0f * (1.0f / 32.0f)); break; // 1/32
+//            case 1: lfoFreqToUse = bpm / (60.0f * (1.0f / 16.0f)); break; // 1/16
+//            case 2: lfoFreqToUse = bpm / (60.0f * (1.0f / 8.0f));  break; // 1/8
+//            case 3: lfoFreqToUse = bpm / (60.0f * (1.0f / 4.0f));  break; // 1/4
+//            case 4: lfoFreqToUse = bpm / (60.0f * (1.0f / 2.0f));  break; // 1/2
+//            case 5: lfoFreqToUse = bpm / 60.0f;                    break; // 1/1
+//            case 6: lfoFreqToUse = bpm / (60.0f / 2.0f);           break; // 2/1
+//            case 7: lfoFreqToUse = bpm / (60.0f / 3.0f);           break; // 3/1
+//            case 8: lfoFreqToUse = bpm / (60.0f / 4.0f);           break; // 4/1
+//            default: lfoFreqToUse = bpm / 60.0f;                   break; // fallback: 1 beat per second
+//        }
+        
+        std::array<float, 9> beatsPerCycle = {
+            0.125f, 0.25f, 0.5f, 1.0f,
+            2.0f, 4.0f, 8.0f, 12.0f, 16.0f
+        };
+
+        if (syncIndex >= 0 && syncIndex < (int)beatsPerCycle.size())
+            lfoFreqToUse = (bpm / 60.0f) / beatsPerCycle[syncIndex];
+        else
+            lfoFreqToUse = bpm / 60.0f;
+        
+        
+        
     }
 
     // 4) Convert “delay” to an integer number of samples (clamp if needed):

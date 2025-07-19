@@ -13,10 +13,15 @@ WahComponent::WahComponent(juce::AudioProcessorValueTreeState& apvtsRef) : FXUni
     // Whenever the toggle changes, show/hide the appropriate control:
     syncToggle.onClick = [this]() { updateSliderVisibility(); };
     
-    syncRateBox.addItem("1/4",  1);
-    syncRateBox.addItem("1/8",  2);
-    syncRateBox.addItem("1/16", 3);
-    syncRateBox.addItem("1/32", 4);
+    syncRateBox.addItem("1/32", 1);
+    syncRateBox.addItem("1/16", 2);
+    syncRateBox.addItem("1/8",  3);
+    syncRateBox.addItem("1/4",  4);
+    syncRateBox.addItem("1/2",  5);
+    syncRateBox.addItem("1/1",  6);
+    syncRateBox.addItem("2/1",  7);
+    syncRateBox.addItem("3/1",  8);
+    syncRateBox.addItem("4/1",  9);
     // (IDs and strings should match whatever your processor expects)
     syncRateBox.setJustificationType(juce::Justification::centred);
     addAndMakeVisible(syncRateBox);
@@ -77,7 +82,7 @@ void WahComponent::resized()
 
 void WahComponent::paint(juce::Graphics& g)
 {
-    g.fillAll (juce::Colours::darkgrey);
+//    g.fillAll (juce::Colours::darkgrey);
    g.setColour (juce::Colours::white);
    g.setFont (15.0f);
    g.drawFittedText ("Wah Controls", getLocalBounds().removeFromTop(30), juce::Justification::centred, 1);

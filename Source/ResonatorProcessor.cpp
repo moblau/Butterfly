@@ -86,11 +86,25 @@ void ResonatorProcessor::setDelayLines(const juce::MidiBuffer& midiMessages)
                 if (activeMidiNotes[i] == noteNumber)
                 {
                     activeMidiNotes[i] = -1;
-                    delayLines[i].reset();
-                    int maxDelay = delayLines[i].getMaximumDelayInSamples();
-                    for (int j = 0; j < maxDelay; ++j)
-                        delayLines[i].pushSample(0, 0.0f);
-                    
+
+                    // Smoothly fade out the delay line content instead of abrupt reset
+//                    const int fadeSamples = 64; // Short fade length
+//                    float fade = 1.0f;
+//
+//                    for (int j = 0; j < fadeSamples; ++j)
+//                    {
+//                        fade = 1.0f - static_cast<float>(j) / static_cast<float>(fadeSamples);
+//
+//                        float currentL = delayLines[i].popSample(0);
+//                        float currentR = delayLines[i].popSample(1);
+//
+//                        delayLines[i].pushSample(0, currentL * fade);
+//                        delayLines[i].pushSample(1, currentR * fade);
+//                    }
+//
+//                    // Optionally reset the delay line after fading
+//                    delayLines[i].reset();  // Clears internal state (like filters), but no hard pop
+
                     break;
                 }
             }

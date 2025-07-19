@@ -97,6 +97,7 @@ StepSequencer::StepSequencer(int numSteps_, int stepSeqIndex,
     
     
     stepCountSlider.setSliderStyle(juce::Slider::LinearHorizontal);
+    stepCountSlider.setRange(1, 8);
     stepCountSlider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
     addAndMakeVisible(stepCountSlider);
 
@@ -109,45 +110,62 @@ StepSequencer::StepSequencer(int numSteps_, int stepSeqIndex,
 
 void StepSequencer::resized()
 {
+    stepCount = static_cast<int>(*parameters.getRawParameterValue("seq" + juce::String(seqIndex) + "STEP_COUNT"));
+
     auto area = getLocalBounds();
     auto bottomArea = area.removeFromBottom(15);
-    auto offsetArea = area.removeFromTop(50);
-    stepCountSlider.setBounds(bottomArea);
-    // Reserve the top 30 pixels for the modulation list box.
-    auto modulationArea = area.removeFromTop(30);
+    auto modulationArea = area.removeFromTop(40);
+    auto offsetArea = area.removeFromTop(30);
 
-    // The remaining area is used by the step sliders.
+    stepCountSlider.setBounds(bottomArea);
+
     int stepWidth = area.getWidth() / numSteps;
+
+    // Layout and show active sliders
     for (int i = 0; i < numSteps; ++i)
     {
-        stepSliders[i]->setBounds(i * stepWidth, area.getY(), stepWidth, area.getHeight());
+        if (i < stepCount)
+        {
+            stepSliders[i]->setBounds(i * stepWidth, area.getY(), stepWidth, area.getHeight());
+            stepSliders[i]->setVisible(true);
+        }
+        else
+        {
+            stepSliders[i]->setVisible(false);
+        }
+
+        offsetKnobs[i]->setBounds(i * stepWidth, offsetArea.getY(), stepWidth, offsetArea.getHeight());
+        // Optional: also hide offset knobs beyond stepCount
+        offsetKnobs[i]->setVisible(i < stepCount);
     }
-    for (int i = 0; i < numSteps; ++i)
-    {
-        offsetKnobs[i]->setBounds(i * stepWidth, 50, stepWidth, offsetArea.getHeight());
-    }
+
     rateSelector.setBounds(10, 10, 80, 24);
     modNumeratorButton.setBounds(150, 10, 120, 24);
     modDenominatorButton.setBounds(290, 10, 140, 24);
     modAmountButton.setBounds(440, 10, 120, 24);
-    modGainButton.setBounds(590,10,120,24);
+    modGainButton.setBounds(590, 10, 120, 24);
 }
 
 void StepSequencer::paint(juce::Graphics& g)
 {
-    // Draw a dark grey background.
-    g.fillAll(juce::Colours::blueviolet);
-    // Highlight the current step.
+    // Draw a dark blue background.
+    g.fillAll(juce::Colour::fromFloatRGBA(0.125f, 0.25f, 0.5f, 1.0f));
+
     if (currentStep >= 0 && currentStep < stepSliders.size())
     {
-        // Get the area excluding the modulation list box (top 30 pixels).
         auto area = getLocalBounds();
         auto stepArea = area;
-        stepArea.removeFromTop(30);
-        
+        stepArea.removeFromTop(30); // exclude modulation list box
+
         int stepWidth = stepArea.getWidth() / numSteps;
-        g.setColour(juce::Colours::limegreen.withAlpha(0.3f));
+
+        // Highlight the current step with a fill
+        g.setColour(juce::Colour::fromFloatRGBA(.125, 0.25f, 0.75f, 1));
         g.fillRect(currentStep * stepWidth, stepArea.getY(), stepWidth, stepArea.getHeight());
+
+        // Draw border around active steps from 0 to currentStep (inclusive)
+        g.setColour(juce::Colours::white.withAlpha(0.9f));
+        g.drawRect(0, stepArea.getY(), (stepCount ) * stepWidth, stepArea.getHeight()-15, 2); // thickness = 2
     }
 }
 
@@ -190,8 +208,8 @@ void StepSequencer::updateFromHostPosition(double ppqPosition, double bpm)
     }
     
     // Get the current step count
-    int stepCount = static_cast<int>(*parameters.getRawParameterValue("seq" + juce::String(seqIndex) + "STEP_COUNT"));
-    
+    stepCount = static_cast<int>(*parameters.getRawParameterValue("seq" + juce::String(seqIndex) + "STEP_COUNT"));
+    resized();
     // Calculate sequence length in beats
     double sequenceLengthInBeats = stepCount * beatLength;
     

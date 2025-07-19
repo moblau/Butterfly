@@ -11,6 +11,17 @@ public:
     void update(); // poles = 1 to 4
     void process(juce::AudioBuffer<float>& buffer) override;
     void reset() override;
+    
+    void startADSR() { adsr.noteOn(); }
+    void stopADSR() { adsr.noteOff(); }
+    void computeCoeffs(double modulatedFc);
+    
+    void setEnvelopeStatus(bool newStatus){
+        usesEnvelope = newStatus;
+    }
+    void setVoiceNum(int voiceIndex){
+        filterIndex = voiceIndex;
+    }
 private:
     static constexpr int maxPoles = 4;
 
@@ -24,9 +35,13 @@ private:
     double K = 0.0;
     double alpha = 0.0;
     double alpha0 = 1.0;
-
+    
+    bool usesEnvelope;
+    int filterIndex;
     std::array<std::array<double, maxPoles>, 2> z = {};
     std::array<double, maxPoles> beta = {};
-
+    
+    juce::ADSR adsr;
+    
     void calcCoefficients();
 };

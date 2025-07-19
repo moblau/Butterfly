@@ -7,6 +7,7 @@
 #include "FXChainComponent.h"
 #include "VoiceTabComponent.h"
 #include "ModulationComponent.h"
+#include "CustomLookAndFeel.h"
 class ButterflyAudioProcessorEditor  : public juce::AudioProcessorEditor, public juce::Timer
 {
 public:
@@ -38,6 +39,6 @@ private:
     
     void setupSlider(juce::Slider& slider, juce::Slider::SliderStyle style = juce::Slider::LinearHorizontal);
     void setupWaveformSelector(juce::ComboBox& box);
-
+    CustomLookAndFeel customLookAndFeel;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ButterflyAudioProcessorEditor)
 };

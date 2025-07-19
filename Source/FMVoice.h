@@ -2,10 +2,12 @@
 #include <JuceHeader.h>
 #include "FMSound.h"
 #include "SmoothDownsampler.h"
+#include "Filter.h"
+
 class FMVoice : public juce::SynthesiserVoice
 {
 public:
-    FMVoice();
+    FMVoice(juce::AudioProcessorValueTreeState &apvtsRef,juce::AudioPlayHead* playHead, int voiceNum);
     
     void prepare(double sampleRate, int samplesPerBlock);
     bool canPlaySound(juce::SynthesiserSound* sound) override;
@@ -73,4 +75,7 @@ private:
     juce::ADSR       env;
     juce::ADSR::Parameters envParams;
     std::unique_ptr<juce::dsp::Oversampling<float>> oversampling;
+    
+    Filter voiceFilter1, voiceFilter2;
+    
 };

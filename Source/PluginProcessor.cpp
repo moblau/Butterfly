@@ -21,7 +21,7 @@ apvts(*this, nullptr, "PARAMETERS", createParameters()), fxChainProcessor(apvts,
     synth.clearVoices();
     for (int i = 0; i < 4; ++i)
     {
-        auto* voice = new FMVoice();
+        auto* voice = new FMVoice(apvts, getPlayHead(), i+1);
         synth.addVoice (voice);
 
         // Now that we're in prepareToPlay, we know sampleRate & blockSize:
@@ -166,7 +166,7 @@ void ButterflyAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
 //            }
 //            
 //            double seqLengthInBeats = stepCount * beatLength;
-//            if (seqLengthInBeats > 0.0)
+//            ifƒwah (seqLengthInBeats > 0.0)
 //            {
 //                double beatInLoop = std::fmod(info.ppqPosition, seqLengthInBeats);
 //                currentStep = static_cast<int>(beatInLoop/beatLength);
@@ -303,7 +303,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout ButterflyAudioProcessor::cre
         parameters.push_back(std::make_unique<juce::AudioParameterInt>(
             juce::ParameterID("seq" + juce::String(j) + "STEP_COUNT", 1),
             "seq" + juce::String(j) + "STEP_COUNT",
-            1, 8, 8));
+            0, 8, 8));
 
         parameters.push_back(std::make_unique<juce::AudioParameterChoice>(
             juce::ParameterID("seq" + juce::String(j) + "RATE", 1),
@@ -349,10 +349,10 @@ juce::AudioProcessorValueTreeState::ParameterLayout ButterflyAudioProcessor::cre
         juce::ParameterID("wahFreq", 1), "wahFreq", 1.0f, 50.0f, 10.0f));
     
     parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID("wahFeedback", 1), "wahFeedback", 0.0f, 1.0f, 0.5f));
+        juce::ParameterID("wahFeedback", 1), "wahFeedback", 0.0f, 1.0f, 0.0f));
     
     parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID("wahDelay", 1), "wahDelay", 5.0f, 50.0f, 20.0f));
+        juce::ParameterID("wahDelay", 1), "wahDelay", 5.0f, 100.0f, 20.0f));
     
     
     parameters.push_back(std::make_unique<juce::AudioParameterBool>(
@@ -361,7 +361,10 @@ juce::AudioProcessorValueTreeState::ParameterLayout ButterflyAudioProcessor::cre
         false));                        // default = false (use free freq)
 
     // 2) Choice for sync rate (quarter, eighth, sixteenth, etc.)
-    juce::StringArray syncChoices { "1/4", "1/8", "1/16", "1/32" };
+    juce::StringArray syncChoices {
+        "1/32", "1/16", "1/8", "1/4",
+        "1/2", "1/1", "2/1", "3/1", "4/1"
+    };
     parameters.push_back(std::make_unique<juce::AudioParameterChoice>(
           juce::ParameterID("WahSyncRate", 1),                // ID
         "WahSyncRate",                    // UI name
@@ -439,5 +442,20 @@ juce::AudioProcessorValueTreeState::ParameterLayout ButterflyAudioProcessor::cre
             200.0f));
     }
 
+    for (int i = 1; i < 5; ++i)
+    {
+        parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
+            juce::ParameterID("filter_freq" + juce::String(i), 1),
+            "filter_freq"+ juce::String(i),
+            juce::NormalisableRange<float>(20.0f, 22000.0f, 0.01f, 0.25f), // Skewed for perceptual tuning
+                                                                         22000.0f));
+
+        parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
+            juce::ParameterID("filter_res"+ juce::String(i), 1),
+            "filter_res"+ juce::String(i),
+            juce::NormalisableRange<float>(1.0f, 3.0, 0.01f),
+            1.0f));
+    }
     return { parameters.begin(), parameters.end() };
 }
+
