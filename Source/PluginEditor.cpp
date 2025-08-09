@@ -124,10 +124,14 @@ void ButterflyAudioProcessorEditor::timerCallback()
         juce::AudioPlayHead::CurrentPositionInfo info;
         if (playhead->getCurrentPosition(info))
         {
-            if (auto* current = dynamic_cast<VoiceTabComponent*> (
-              tabs.getCurrentContentComponent()))
+            voiceTab1.sequencer.updateFromHostPosition(info.ppqPosition, info.bpm);
+            voiceTab2.sequencer.updateFromHostPosition(info.ppqPosition, info.bpm);
+            voiceTab3.sequencer.updateFromHostPosition(info.ppqPosition, info.bpm);
+            voiceTab4.sequencer.updateFromHostPosition(info.ppqPosition, info.bpm);
+
+            // Optional: Only repaint the visible one if expensive
+            if (auto* current = dynamic_cast<VoiceTabComponent*>(tabs.getCurrentContentComponent()))
             {
-                current->sequencer.updateFromHostPosition(info.ppqPosition, info.bpm);
                 current->sequencer.repaint();
             }
         }

@@ -18,15 +18,27 @@ class SliderWithLabel : public juce::Component
 public:
     SliderWithLabel() = default;
     
-    SliderWithLabel(juce::String newLabel){
+    SliderWithLabel(juce::String newLabel, juce::AudioProcessorValueTreeState& apvtsRef, juce::String prefix) : apvts(apvtsRef), prefix(prefix){
         slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
         slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 20);
         slider.setLookAndFeel(&customLookAndFeel);
         addAndMakeVisible(slider);
+        // Listen for right-clicks on the slider to toggle modulation colour
+        slider.addMouseListener(this, false);
 
         label.setText(newLabel, juce::dontSendNotification);
         label.setJustificationType(juce::Justification::centred);
         addAndMakeVisible(label);
+        paramName = newLabel;
+        if ( auto * param = apvtsRef.getParameter(newLabel+prefix+"modulate")){
+            isModulated = param->getValue();
+            customLookAndFeel.setModulationStatus(isModulated);
+        }
+//        else{
+//            isModulated = 0;
+//            customLookAndFeel.setModulationStatus(isModulated);
+//        }
+        
     }
     ~SliderWithLabel() override
     {
@@ -34,17 +46,60 @@ public:
     }
     juce::Slider& getSlider() { return slider; }
     juce::Label& getLabel() { return label; }
+
+    // Allow external control of the visual modulated state
+    void setModulated(bool shouldBeBlue)
+    {
+        isModulated = shouldBeBlue;
+        if (isModulated)
+        {
+            slider.setColour(juce::Slider::rotarySliderFillColourId, juce::Colours::deepskyblue);
+            slider.setColour(juce::Slider::thumbColourId, juce::Colours::deepskyblue);
+        }
+        else
+        {
+            // Reset to default look-and-feel colours by clearing overrides
+            slider.setColour(juce::Slider::rotarySliderFillColourId, juce::Colour());
+            slider.setColour(juce::Slider::thumbColourId, juce::Colour());
+        }
+        repaint();
+    }
+    bool getIsModulated() const { return isModulated; }
     
-    void resized()
+    void resized() override
     {
         auto bounds = getLocalBounds();
         label.setBounds(bounds.removeFromTop(20));
         slider.setBounds(bounds);
     }
+
+    // Toggle modulation colour on right-click (including ctrl-click on macOS)
+    void mouseDown(const juce::MouseEvent& e) override
+    {
+        if (e.mods.isRightButtonDown() || e.mods.isCtrlDown() ){
+            if ( isModulated == 0 ){
+                isModulated = 1;
+            }
+            else{
+                isModulated = 0;
+            }
+            if ( auto * param = apvts.getParameter(paramName+prefix+"modulate")){
+                param->setValueNotifyingHost(isModulated);
+                customLookAndFeel.setModulationStatus(isModulated);
+            }
+        }
+        
+    }
 private:
     juce::Slider slider;
     juce::Label label;
+    int isModulated;
+    
+    
     CustomLookAndFeel customLookAndFeel;
+    juce::AudioProcessorValueTreeState& apvts;
+    juce::String paramName;
+    juce::String prefix;
 };
 
 class WaveformSelector : public juce::Component, private juce::AudioProcessorValueTreeState::Listener

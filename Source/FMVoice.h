@@ -3,6 +3,7 @@
 #include "FMSound.h"
 #include "SmoothDownsampler.h"
 #include "Filter.h"
+#include "ResonatorProcessor.h"
 
 class FMVoice : public juce::SynthesiserVoice
 {
@@ -77,5 +78,6 @@ private:
     std::unique_ptr<juce::dsp::Oversampling<float>> oversampling;
     
     Filter voiceFilter1, voiceFilter2;
+    ResonatorProcessor resonator;
     
 };

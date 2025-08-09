@@ -28,14 +28,27 @@ void FMSynth::updateSynthParameters()
             int currentStep = static_cast<int>(*apvts.getRawParameterValue("seq" + idSuffix[i+1] + "CURRENT_STEP"));
             float stepValue = *apvts.getRawParameterValue("seq" + idSuffix[i+1] + "step" + juce::String(currentStep));
             
-            bool modAmountActive = *apvts.getRawParameterValue("seq" + idSuffix[i+1] + "MOD_AMOUNT_ACTIVE");
-            bool modNumActive = *apvts.getRawParameterValue("seq" + idSuffix[i+1] + "MOD_NUM_ACTIVE");
-            bool modDenActive = *apvts.getRawParameterValue("seq" + idSuffix[i+1] + "MOD_DEN_ACTIVE");
-            bool modGainActive = *apvts.getRawParameterValue("seq" + idSuffix[i+1] + "MOD_CARRIER_ACTIVE");
+            bool modAmountActive = *apvts.getRawParameterValue("Mod Amount" + idSuffix[i+1] + "modulate");
+            
+            bool modNumActive = *apvts.getRawParameterValue("Num" + idSuffix[i+1] + "modulate");
+            bool modDenActive = *apvts.getRawParameterValue("Den" + idSuffix[i+1] + "modulate");
+            
+            bool modDetuneActive = *apvts.getRawParameterValue("Detune" + idSuffix[i+1] + "modulate");
+            bool modPanActive = *apvts.getRawParameterValue("Pan" + idSuffix[i+1] + "modulate");
+            bool modDownsampleActive = *apvts.getRawParameterValue("Downsample" + idSuffix[i+1] + "modulate");
+
+            bool modResOffsetActive = *apvts.getRawParameterValue("Resonator Offset" + idSuffix[i+1] + "modulate");
+            bool modResFeedbacksetActive = *apvts.getRawParameterValue("Resonator Feedback" + idSuffix[i+1] + "modulate");
+            
+//            bool modGainActive = *apvts.getRawParameterValue("seq" + idSuffix[i+1] + "MOD_CARRIER_ACTIVE");
             bool shouldAlias = *apvts.getRawParameterValue(idSuffix[i+1]+"AliasToggle");
             float scaledStepRatio = stepValue * 10.0f - 5.0f;
 
-            voice->setPan(*apvts.getRawParameterValue("PAN" + idSuffix[i+1]));
+            float panSeq = 0;
+            if ( modPanActive ){
+                panSeq = stepValue;
+            }
+            voice->setPan(*apvts.getRawParameterValue("PAN" + idSuffix[i+1])+ panSeq);
 
             int baseNumerator = static_cast<int>(*apvts.getRawParameterValue("MOD_RATIO_NUM" + idSuffix[i+1]));
             int modNumerator = baseNumerator + (modNumActive ? static_cast<int>(scaledStepRatio) : 0);
@@ -53,11 +66,21 @@ void FMSynth::updateSynthParameters()
             modIndex = juce::jlimit(0.0f, 50.0f, modIndex);
 
             voice->setModulationIndex(modIndex);
+            
             voice->setModulatorWaveform(static_cast<int>(*apvts.getRawParameterValue("MOD_WAVEFORM" + idSuffix[i+1])));
-            voice->setDetune(*apvts.getRawParameterValue("DETUNE" + idSuffix[i+1]));
+            float detuneSeq = 0;
+            if ( modDetuneActive ){
+                detuneSeq = stepValue;
+            }
+            voice->setDetune(*apvts.getRawParameterValue("DETUNE" + idSuffix[i+1]) + detuneSeq);
+            
             voice->setWaveform(static_cast<int>(*apvts.getRawParameterValue("WAVEFORM" + idSuffix[i+1])));
 //            DBG(static_cast<int>(*apvts.getRawParameterValue("WAVEFORM" + idSuffix[i+1])));
-            voice->setDownsampleFactor(static_cast<int>(*apvts.getRawParameterValue("DOWNSAMPLE" + idSuffix[i+1])));
+            float downsampleSeq = 0;
+            if ( modDownsampleActive ){
+                downsampleSeq = juce::jlimit(0.0f,50.0f,stepValue*50);
+            }
+            voice->setDownsampleFactor(static_cast<int>(*apvts.getRawParameterValue("DOWNSAMPLE" + idSuffix[i+1]))+static_cast<int>(downsampleSeq));
             voice->setGain(stepValue);
             voice->setAlias(shouldAlias);
         }

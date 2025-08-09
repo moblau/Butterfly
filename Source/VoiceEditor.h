@@ -18,14 +18,17 @@ private:
     CustomLookAndFeel customLookAndFeel;
     
 //    juce::Slider panSlider, detuneSlider, modIndexSlider, modRatioNumSlider, modRatioDenSlider, downsampleSlider;
-    SliderWithLabel panSlider {"Pan"};
-    SliderWithLabel detuneSlider {"Detune"};
-    SliderWithLabel modIndexSlider {"Mod Amount"};
-    SliderWithLabel modRatioNumSlider {"Numerator"};
-    SliderWithLabel modRatioDenSlider {"Denominator"};
-    SliderWithLabel downsampleSlider {"Downsample"};
-    SliderWithLabel freqSlider {"Frequency"};
-    SliderWithLabel resSlider {"Resonance"};
+    SliderWithLabel panSlider ;
+    SliderWithLabel detuneSlider;
+    SliderWithLabel modIndexSlider ;
+    SliderWithLabel modRatioNumSlider;;
+    SliderWithLabel modRatioDenSlider ;
+    SliderWithLabel downsampleSlider ;
+    SliderWithLabel freqSlider ;
+    SliderWithLabel resSlider;
+    
+    SliderWithLabel resonatorOffsetSlider;
+    SliderWithLabel resonatorFeedbackSlider;
     
 //    juce::Label panSliderLabel, detuneSliderLabel, modIndexSliderLabel, modRatioNumSliderLabel, modRatioDenSliderLabel, downsampleSliderLabel;
 
@@ -33,7 +36,7 @@ private:
     
     WaveformSelector carrierWaveform, modWaveform;
 
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> panAttach, detuneAttach, modIndexAttach, modRatioNumAttach, modRatioDenAttach, downsampleAttach;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> panAttach, detuneAttach, modIndexAttach, modRatioNumAttach, modRatioDenAttach, downsampleAttach, resOffsetAttach, resFeedbackAttach;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> modWaveformAttach, waveformAttach;
 
     

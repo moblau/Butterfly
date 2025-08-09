@@ -1,6 +1,7 @@
 #pragma once
 
 #include <JuceHeader.h>
+#include "CustomLookAndFeel.h"
 
 class StepSequencer : public juce::Component
 {
@@ -48,5 +49,6 @@ private:
     juce::Slider stepCountSlider;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> stepCountSliderAttachment;
     
+    StepSequencerLookAndFeel lnf;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(StepSequencer)
 };

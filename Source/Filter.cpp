@@ -61,8 +61,22 @@ void Filter::update()
         adsr.setParameters(envParams);
     }
     else{
-        freqParam = *apvts.getRawParameterValue("filter_freq" + juce::String(filterIndex));
-        resParam  = *apvts.getRawParameterValue("filter_res" + juce::String(filterIndex));
+        bool modFreqActive = *apvts.getRawParameterValue("Frequency" + juce::String(filterIndex) + "modulate");
+        bool modResActive = *apvts.getRawParameterValue("Resonance" + juce::String(filterIndex) + "modulate");
+        
+        int currentStep = static_cast<int>(*apvts.getRawParameterValue("seq" + juce::String(filterIndex) + "CURRENT_STEP"));
+        float stepValue = *apvts.getRawParameterValue("seq" + juce::String(filterIndex) + "step" + juce::String(currentStep));
+        
+        float filterSeq = 0;
+        if ( modFreqActive ){
+            filterSeq = stepValue*20000.0f;
+        }
+        float resSeq = 0;
+        if ( modResActive ){
+            resSeq = stepValue*3.0f;
+        }
+        freqParam = juce::jlimit(20.0f,20000.0f,*apvts.getRawParameterValue("filter_freq" + juce::String(filterIndex))+filterSeq);
+        resParam  = juce::jlimit(0.0f,3.0f,*apvts.getRawParameterValue("filter_res" + juce::String(filterIndex))+resSeq);
 
     }
 

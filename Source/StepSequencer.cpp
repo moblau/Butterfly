@@ -18,6 +18,7 @@ StepSequencer::StepSequencer(int numSteps_, int stepSeqIndex,
     for (int i = 0; i < numSteps; ++i)
     {
         auto slider = std::make_unique<juce::Slider>();
+//        slider->setLookAndFeel(&lnf);
         slider->setSliderStyle(juce::Slider::LinearVertical);
         slider->setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
     
@@ -33,6 +34,7 @@ StepSequencer::StepSequencer(int numSteps_, int stepSeqIndex,
     for (int i = 0; i < numSteps; ++i)
     {
         auto slider = std::make_unique<juce::Slider>();
+//        slider->setLookAndFeel(&lnf);
         slider->setSliderStyle(juce::Slider::RotaryVerticalDrag);
         slider->setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
     

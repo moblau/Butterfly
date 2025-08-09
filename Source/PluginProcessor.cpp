@@ -382,14 +382,74 @@ juce::AudioProcessorValueTreeState::ParameterLayout ButterflyAudioProcessor::cre
         ));
     }
     
-    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID("res_feedback", 1), "res_feedback", 0.0f, 1.0f, 0.0f));
+    for (int i = 1; i < 5; ++i)
+    {
+        parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
+            juce::ParameterID("res_feedback" + juce::String(i), 1),
+            "res_feedback" + juce::String(i),
+            0.0f, 1.0f, 0.0f));
+
+        parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
+            juce::ParameterID("res_offset" + juce::String(i), 1),
+            "res_offset" + juce::String(i),
+            0.0f, 1.0f, 0.0f));
+    }
     
-    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID("res_drywet", 1), "res_drywet", 0.0f, 1.0f, 0.0f));
     
-    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID("res_ratio", 1), "res_drywet", 1.0f, 4.0f, 1.0f));
+    for (int i = 1; i < 5; ++i)
+    {
+        parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
+            juce::ParameterID("Pan" + juce::String(i) + "modulate", 1),
+            "Pan" + juce::String(i) + "modulate",
+            0.0f, 1.0f, 0.0f));
+        
+        parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
+            juce::ParameterID("Detune" + juce::String(i) + "modulate", 1),
+            "Detune" + juce::String(i) + "modulate",
+            0.0f, 1.0f, 0.0f));
+        
+        parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
+            juce::ParameterID("Downsample" + juce::String(i) + "modulate", 1),
+            "Downsample" + juce::String(i) + "modulate",
+            0.0f, 1.0f, 0.0f));
+        
+        parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
+            juce::ParameterID("Mod Amount" + juce::String(i) + "modulate", 1),
+            "Mod Amount" + juce::String(i) + "modulate",
+            0.0f, 1.0f, 0.0f));
+        
+        parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
+            juce::ParameterID("Frequency" + juce::String(i) + "modulate", 1),
+            "Frequency" + juce::String(i) + "modulate",
+            0.0f, 1.0f, 0.0f));
+        
+        parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
+            juce::ParameterID("Resonance" + juce::String(i) + "modulate", 1),
+            "Resonance" + juce::String(i) + "modulate",
+            0.0f, 1.0f, 0.0f));
+        
+        parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
+            juce::ParameterID("Resonator Feedback" + juce::String(i) + "modulate", 1),
+            "Resonator Feedback" + juce::String(i) + "modulate",
+            0.0f, 1.0f, 0.0f));
+        
+        parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
+            juce::ParameterID("Resonator Offset" + juce::String(i) + "modulate", 1),
+            "Resonator Offset" + juce::String(i) + "modulate",
+            0.0f, 1.0f, 0.0f));
+
+        parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
+            juce::ParameterID("Num" + juce::String(i) + "modulate", 1),
+            "Num" + juce::String(i) + "modulate",
+            0.0f, 1.0f, 0.0f));
+        
+        parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
+            juce::ParameterID("Den" + juce::String(i) + "modulate", 1),
+            "Den" + juce::String(i) + "modulate",
+            0.0f, 1.0f, 0.0f));
+        
+    }
+    
     
     
     parameters.push_back(std::make_unique<juce::AudioParameterFloat>(

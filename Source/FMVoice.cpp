@@ -1,6 +1,6 @@
 #include "FMVoice.h"
 
-FMVoice::FMVoice(juce::AudioProcessorValueTreeState &apvtsRef,juce::AudioPlayHead* playHead, int voiceNum) : ds(0), voiceFilter1(apvtsRef,playHead), voiceFilter2(apvtsRef,playHead) {
+FMVoice::FMVoice(juce::AudioProcessorValueTreeState &apvtsRef,juce::AudioPlayHead* playHead, int voiceNum) : ds(0), voiceFilter1(apvtsRef,playHead), voiceFilter2(apvtsRef,playHead), resonator(apvtsRef,playHead,voiceNum) {
     oversampling.reset(new juce::dsp::Oversampling<float>(2, 4, juce::dsp::Oversampling<float>::filterHalfBandPolyphaseIIR,true,true));
     quickReleaseEnvParams.attack = 0.0f;     // Instant attack
     quickReleaseEnvParams.decay = 0.0f;      // No decay
@@ -31,6 +31,8 @@ void FMVoice::prepare(double sampleRate, int samplesPerBlock){
     voiceFilter1.setEnvelopeStatus(false);
     voiceFilter2.prepare(sampleRate, samplesPerBlock);
     voiceFilter2.setEnvelopeStatus(true);
+    
+    resonator.prepare(sampleRate,samplesPerBlock);
 
 
 }
@@ -62,7 +64,7 @@ void FMVoice::startNote(int midiNoteNumber, float velocity,
     level = .1;
     
     pan = 0.5f;
-    
+    resonator.setDelayLines(baseFrequency);
 //    delayLine.reset();
 }
 
@@ -210,6 +212,8 @@ void FMVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
     voiceFilter2.update();
     voiceFilter2.process(tempBuf);
     
+    resonator.process(tempBuf);
+    
     for (int ch = 0; ch < outputBuffer.getNumChannels(); ++ch)
     {
         auto* dst = outputBuffer.getWritePointer(ch, startSample);
@@ -228,7 +232,6 @@ void FMVoice::setPan(float newPan) { pan = juce::jlimit(0.0f, 1.0f, newPan); }
 void FMVoice::setGain(float g){ gain = g;}
 void FMVoice::setWaveform(int waveformId)
 {
-    DBG(waveformId);
     switch (waveformId)
     {
         case 0: waveform = Waveform::Sine; break;

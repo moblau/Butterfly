@@ -43,7 +43,13 @@ void CustomLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int wi
 //     g.fillEllipse(bounds.reduced(width * 0.15f));
 
      // Inner circle (center of knob)
-     g.setColour(juce::Colours::darkgrey.brighter(0.1f));
+    if (isModulated==0){
+        g.setColour(juce::Colours::darkgrey.brighter(0.1));
+    }
+    else{
+        g.setColour(juce::Colours::blueviolet.brighter(0.1f));
+    }
+    
      g.fillEllipse(centerX - radius * 0.6f, centerY - radius * 0.6f, radius * 1.2f, radius * 1.2f);
 
      // Pointer
@@ -125,3 +131,11 @@ void CustomLookAndFeel::drawLinearSlider(juce::Graphics& g, int x, int y, int wi
 //         g.fillEllipse(quantizedSliderPos - thumbRadius, centerY - thumbRadius, thumbRadius * 2.0f, thumbRadius * 2.0f);
      }
  }
+
+StepSequencerLookAndFeel::StepSequencerLookAndFeel(){
+    
+}
+
+StepSequencerLookAndFeel::~StepSequencerLookAndFeel(){
+    
+}

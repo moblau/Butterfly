@@ -2,7 +2,18 @@
 
 VoiceEditor::VoiceEditor(juce::AudioProcessorValueTreeState& apvts, const juce::String& voicePrefix) :
 carrierWaveform(apvts,juce::String("WAVEFORM"), voicePrefix),
-modWaveform(apvts,juce::String("MOD_WAVEFORM"), voicePrefix)
+modWaveform(apvts,juce::String("MOD_WAVEFORM"), voicePrefix),
+panSlider("Pan", apvts, voicePrefix),
+detuneSlider("Detune", apvts, voicePrefix),
+modIndexSlider("Mod Amount", apvts, voicePrefix),
+modRatioNumSlider("Num", apvts, voicePrefix),
+modRatioDenSlider("Den", apvts, voicePrefix),
+downsampleSlider("Downsample", apvts, voicePrefix),
+freqSlider("Frequency", apvts, voicePrefix),
+resSlider("Resonance", apvts, voicePrefix),
+resonatorOffsetSlider("Resonator Offset", apvts, voicePrefix),
+resonatorFeedbackSlider("Resonator Feedback", apvts, voicePrefix)
+
 {
 //    setupSlider(panSlider,panSliderLabel,"Pan");
 //    setupSlider(detuneSlider,detuneSliderLabel,"Detune");
@@ -13,7 +24,7 @@ modWaveform(apvts,juce::String("MOD_WAVEFORM"), voicePrefix)
 //    setupSlider(freqSlider,freqSliderLabel,"Frequency");
 //    setupSlider(resSlider,resSliderLabel,"Resonance");
 //
-
+    
     
     addAndMakeVisible(panSlider);
     addAndMakeVisible(detuneSlider);
@@ -23,7 +34,9 @@ modWaveform(apvts,juce::String("MOD_WAVEFORM"), voicePrefix)
     addAndMakeVisible(downsampleSlider);
     addAndMakeVisible(freqSlider);
     addAndMakeVisible(resSlider);
-
+    addAndMakeVisible(resonatorOffsetSlider);
+    addAndMakeVisible(resonatorFeedbackSlider);
+    
 //    setupComboBox(modWaveformBox);
 //    setupComboBox(waveformBox);
     addAndMakeVisible(carrierWaveform);
@@ -39,6 +52,9 @@ modWaveform(apvts,juce::String("MOD_WAVEFORM"), voicePrefix)
     
     freqAttach = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(apvts,  "filter_freq"+voicePrefix, freqSlider.getSlider());
     resAttach = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(apvts,  "filter_res"+voicePrefix, resSlider.getSlider());
+    
+    resOffsetAttach = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(apvts,  "res_offset"+voicePrefix, resonatorOffsetSlider.getSlider());
+    resFeedbackAttach = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(apvts,  "res_feedback"+voicePrefix, resonatorFeedbackSlider.getSlider());
 
 
     
@@ -135,6 +151,8 @@ void VoiceEditor::resized()
     auto topRight = area.removeFromTop(area.getHeight()/2);
     freqSlider.setBounds(topRight.removeFromLeft(topRight.getWidth()/2));
     resSlider.setBounds(topRight);
+    resonatorOffsetSlider.setBounds(area.removeFromRight(area.getWidth()/2));
+    resonatorFeedbackSlider.setBounds(area);
 //    placeLabelAboveSlider(panSliderLabel, panSlider,10,0);
 //    placeLabelAboveSlider(detuneSliderLabel, detuneSlider,10,0);
 //    placeLabelAboveSlider(downsampleSliderLabel, downsampleSlider,10,0);
