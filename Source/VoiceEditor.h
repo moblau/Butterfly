@@ -29,6 +29,7 @@ private:
     
     SliderWithLabel resonatorOffsetSlider;
     SliderWithLabel resonatorFeedbackSlider;
+    SliderWithLabel resonatorOffsetStrengthSlider;
     
 //    juce::Label panSliderLabel, detuneSliderLabel, modIndexSliderLabel, modRatioNumSliderLabel, modRatioDenSliderLabel, downsampleSliderLabel;
 
@@ -36,7 +37,7 @@ private:
     
     WaveformSelector carrierWaveform, modWaveform;
 
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> panAttach, detuneAttach, modIndexAttach, modRatioNumAttach, modRatioDenAttach, downsampleAttach, resOffsetAttach, resFeedbackAttach;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> panAttach, detuneAttach, modIndexAttach, modRatioNumAttach, modRatioDenAttach, downsampleAttach, resOffsetAttach, resFeedbackAttach, resOffsetStrengthAttach;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> modWaveformAttach, waveformAttach;
 
     

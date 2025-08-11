@@ -13,6 +13,7 @@
 #include <JuceHeader.h>
 #include "CustomLookAndFeel.h"
 
+
 class SliderWithLabel : public juce::Component
 {
 public:
@@ -20,8 +21,18 @@ public:
     
     SliderWithLabel(juce::String newLabel, juce::AudioProcessorValueTreeState& apvtsRef, juce::String prefix) : apvts(apvtsRef), prefix(prefix){
         slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-        slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 20);
+//        slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 20);
+        
         slider.setLookAndFeel(&customLookAndFeel);
+        addAndMakeVisible(sliderValueLabel);
+        hideValueBubble();
+        slider.onDragStart   = [this]{ showOrUpdateValueBubble(); };
+        slider.onValueChange = [this]{ showOrUpdateValueBubble(); };
+        slider.onDragEnd     = [this]{ hideValueBubble(); };
+        
+        slider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0, 0);
+        slider.setPopupDisplayEnabled(false, false, &slider);
+        
         addAndMakeVisible(slider);
         // Listen for right-clicks on the slider to toggle modulation colour
         slider.addMouseListener(this, false);
@@ -34,10 +45,6 @@ public:
             isModulated = param->getValue();
             customLookAndFeel.setModulationStatus(isModulated);
         }
-//        else{
-//            isModulated = 0;
-//            customLookAndFeel.setModulationStatus(isModulated);
-//        }
         
     }
     ~SliderWithLabel() override
@@ -46,7 +53,21 @@ public:
     }
     juce::Slider& getSlider() { return slider; }
     juce::Label& getLabel() { return label; }
+    // member in your parent component
+    
+    void showOrUpdateValueBubble()
+    {
+        sliderValueLabel.setVisible(true);
+        sliderValueLabel.setText(juce::String(slider.getValue()), juce::NotificationType::dontSendNotification);
 
+    }
+
+    void hideValueBubble()
+    {
+        sliderValueLabel.setVisible(false);
+        
+    }
+    
     // Allow external control of the visual modulated state
     void setModulated(bool shouldBeBlue)
     {
@@ -71,6 +92,19 @@ public:
         auto bounds = getLocalBounds();
         label.setBounds(bounds.removeFromTop(20));
         slider.setBounds(bounds);
+        int labelWidth, labelHeight;
+        if (slider.getWidth() > 50){
+            labelWidth = 43;
+            labelHeight = 20;
+        }
+        else{
+            labelWidth = 20;
+            labelHeight = 20;
+        }
+
+        sliderValueLabel.setBounds(bounds.withSizeKeepingCentre(labelWidth, labelHeight));
+        sliderValueLabel.setVisible(false);
+
     }
 
     // Toggle modulation colour on right-click (including ctrl-click on macOS)
@@ -91,6 +125,8 @@ public:
         
     }
 private:
+    juce::Label sliderValueLabel;
+
     juce::Slider slider;
     juce::Label label;
     int isModulated;

@@ -5,13 +5,13 @@
               companyName="Zuluby" pluginCharacteristicsValue="pluginIsSynth,pluginWantsMidiIn">
   <MAINGROUP id="iFRJHZ" name="Butterfly">
     <GROUP id="{51942F9A-32FD-D5FE-0310-E53513AF045D}" name="Source">
-      <GROUP id="{B539EFC5-0E44-FEB4-38FB-9DFBC2BEB6F6}" name="Assets">
-        <FILE id="RAsha8" name="SawOff.png" compile="0" resource="1" file="assets/SawOff.png"/>
-        <FILE id="G6D8cy" name="SawOn.png" compile="0" resource="1" file="assets/SawOn.png"/>
-        <FILE id="CSnyWX" name="SineOff.png" compile="0" resource="1" file="assets/SineOff.png"/>
-        <FILE id="CjDk0e" name="SineOn.png" compile="0" resource="1" file="assets/SineOn.png"/>
-        <FILE id="DiNHTt" name="SquareOff.png" compile="0" resource="1" file="assets/SquareOff.png"/>
-        <FILE id="pUHJ0V" name="SquareOn.png" compile="0" resource="1" file="assets/SquareOn.png"/>
+      <GROUP id="{7844E39E-A048-5CD5-1883-BD93CB20F487}" name="assets">
+        <FILE id="r4BcO1" name="SawOff.png" compile="0" resource="1" file="assets/SawOff.png"/>
+        <FILE id="HLFtlD" name="SawOn.png" compile="0" resource="1" file="assets/SawOn.png"/>
+        <FILE id="Xwmk8Z" name="SineOff.png" compile="0" resource="1" file="assets/SineOff.png"/>
+        <FILE id="ri1ng0" name="SineOn.png" compile="0" resource="1" file="assets/SineOn.png"/>
+        <FILE id="G9GIHI" name="SquareOff.png" compile="0" resource="1" file="assets/SquareOff.png"/>
+        <FILE id="NvAa8N" name="SquareOn.png" compile="0" resource="1" file="assets/SquareOn.png"/>
       </GROUP>
       <GROUP id="{82BC2639-C5F3-0956-BAC6-E9EE87CD6B9E}" name="DSP">
         <FILE id="Pho232" name="DSPModule.cpp" compile="1" resource="0" file="Source/DSPModule.cpp"/>

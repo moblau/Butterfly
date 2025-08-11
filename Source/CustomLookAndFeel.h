@@ -39,6 +39,12 @@ public:
                           const juce::Slider::SliderStyle style, juce::Slider& slider) override;
 //    
 //    void drawToggleButton(juce::Graphics& g, juce::ToggleButton& toggleButton, bool shouldDrawButtonAsHighlighted, bool shouldDrawButtonAsDown) override;
+    // length of the little arrow
+    
+    void drawBubble(juce::Graphics& g,
+                        juce::BubbleComponent& bubble/*bubble*/,
+                        const juce::Point<float>& tip,
+                        const juce::Rectangle<float>& body) override;
     
     void setModulationStatus(bool shouldModulate){ isModulated = shouldModulate; };
     

@@ -40,7 +40,29 @@ public:
     void setAlias(bool newAliasStaate);
     void setEnvelopeParams(const juce::ADSR::Parameters& newParams);
 
+    int   getMidiNote()          const { return midiNoteNumber; }
+    float getCarrierFrequency()  const { return carrierFrequency; }
+    float getModulationRatio()   const { return modulationRatio; }   // carrier->mod ratio
+    int   getModWaveform()       const { return (int)modWaveform; }
+    float getModulationIndex()   const { return modulationIndex; }
+
+    // External (mirrored) mod sources: one slot for each *other* voice (up to 4)
+    struct ExternalModParams
+    {
+        bool  enabled   = false;
+        int   waveform  = 0;     // match your Waveform enum
+        float freqHz    = 0.0f;  // absolute Hz (carrier_r * ratio_r)
+        float index     = 0.0f;  // depth from source voice
+        float amount01  = 0.0f;  // matrix slot 0..1 for r->this
+    };
+
+    void setExternalModSources(const ExternalModParams* srcs, int count);
+
 private:
+    
+    ExternalModParams extMod[4];
+    float  extModPhase[4] { 0,0,0,0 };  // local phases for mirrored sources
+    
     int voiceId = -1;
     enum class Waveform { Sine, Saw, Square };
     float getSample(float phase, Waveform wf, bool bandLimited, float dt);

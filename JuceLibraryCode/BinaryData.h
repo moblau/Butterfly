@@ -9,22 +9,22 @@
 namespace BinaryData
 {
     extern const char*   SawOff_png;
-    const int            SawOff_pngSize = 753;
+    const int            SawOff_pngSize = 810;
 
     extern const char*   SawOn_png;
-    const int            SawOn_pngSize = 1818;
+    const int            SawOn_pngSize = 1261;
 
     extern const char*   SineOff_png;
-    const int            SineOff_pngSize = 906;
+    const int            SineOff_pngSize = 774;
 
     extern const char*   SineOn_png;
-    const int            SineOn_pngSize = 1864;
+    const int            SineOn_pngSize = 1410;
 
     extern const char*   SquareOff_png;
-    const int            SquareOff_pngSize = 612;
+    const int            SquareOff_pngSize = 601;
 
     extern const char*   SquareOn_png;
-    const int            SquareOn_pngSize = 1595;
+    const int            SquareOn_pngSize = 1180;
 
     // Number of elements in the namedResourceList and originalFileNames arrays.
     const int namedResourceListSize = 6;

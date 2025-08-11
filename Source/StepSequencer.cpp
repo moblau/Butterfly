@@ -75,27 +75,27 @@ StepSequencer::StepSequencer(int numSteps_, int stepSeqIndex,
 
     addAndMakeVisible(rateSelector);
     
-    modNumeratorButton.setButtonText("Numerator");
-    modDenominatorButton.setButtonText("Denominator");
-    modAmountButton.setButtonText("Mod Gain");
-    modGainButton.setButtonText("Carrier Gain");
+//    modNumeratorButton.setButtonText("Numerator");
+//    modDenominatorButton.setButtonText("Denominator");
+//    modAmountButton.setButtonText("Mod Gain");
+//    modGainButton.setButtonText("Carrier Gain");
+//    
+//    addAndMakeVisible(modNumeratorButton);
+//    addAndMakeVisible(modDenominatorButton);
+//    addAndMakeVisible(modAmountButton);
+//    addAndMakeVisible(modGainButton);
     
-    addAndMakeVisible(modNumeratorButton);
-    addAndMakeVisible(modDenominatorButton);
-    addAndMakeVisible(modAmountButton);
-    addAndMakeVisible(modGainButton);
-    
-    modAmountAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
-        parameters,  "seq" + juce::String(stepSeqIndex) + "MOD_AMOUNT_ACTIVE", modAmountButton);
-
-    modNumeratorAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
-        parameters, "seq" + juce::String(stepSeqIndex) +"MOD_NUM_ACTIVE", modNumeratorButton);
-
-    modDenominatorAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
-        parameters,  "seq" + juce::String(stepSeqIndex) +"MOD_DEN_ACTIVE", modDenominatorButton);
-    
-    modGainButtonAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
-        parameters,  "seq" + juce::String(stepSeqIndex) +"MOD_CARRIER_ACTIVE", modGainButton);
+//    modAmountAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
+//        parameters,  "seq" + juce::String(stepSeqIndex) + "MOD_AMOUNT_ACTIVE", modAmountButton);
+//
+//    modNumeratorAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
+//        parameters, "seq" + juce::String(stepSeqIndex) +"MOD_NUM_ACTIVE", modNumeratorButton);
+//
+//    modDenominatorAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
+//        parameters,  "seq" + juce::String(stepSeqIndex) +"MOD_DEN_ACTIVE", modDenominatorButton);
+//    
+//    modGainButtonAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
+//        parameters,  "seq" + juce::String(stepSeqIndex) +"MOD_CARRIER_ACTIVE", modGainButton);
     
     
     stepCountSlider.setSliderStyle(juce::Slider::LinearHorizontal);
@@ -142,16 +142,30 @@ void StepSequencer::resized()
     }
 
     rateSelector.setBounds(10, 10, 80, 24);
-    modNumeratorButton.setBounds(150, 10, 120, 24);
-    modDenominatorButton.setBounds(290, 10, 140, 24);
-    modAmountButton.setBounds(440, 10, 120, 24);
-    modGainButton.setBounds(590, 10, 120, 24);
+//    modNumeratorButton.setBounds(150, 10, 120, 24);
+//    modDenominatorButton.setBounds(290, 10, 140, 24);
+//    modAmountButton.setBounds(440, 10, 120, 24);
+//    modGainButton.setBounds(590, 10, 120, 24);
 }
 
 void StepSequencer::paint(juce::Graphics& g)
 {
     // Draw a dark blue background.
-    g.fillAll(juce::Colour::fromFloatRGBA(0.125f, 0.25f, 0.5f, 1.0f));
+    // Create a vertical gradient from bottom to top
+    juce::ColourGradient gradient(
+        juce::Colours::black,                      // colour at the top
+        0.0f, 0.0f,                                 // top point (x, y)
+        juce::Colour::fromRGB(32, 0, 64),         // purple (you can tweak)
+        0.0f, (float)getHeight(),                   // bottom point (x, y)
+        false                                       // isRadial = false (linear)
+    );
+
+    // Add an extra colour stop for green near the bottom
+    gradient.addColour(0.4, juce::Colour::fromRGB(34,51,24)); // 0.9 = close to bottom
+
+    // Apply the gradient
+    g.setGradientFill(gradient);
+    g.fillAll();
 
     if (currentStep >= 0 && currentStep < stepSliders.size())
     {
@@ -162,12 +176,14 @@ void StepSequencer::paint(juce::Graphics& g)
         int stepWidth = stepArea.getWidth() / numSteps;
 
         // Highlight the current step with a fill
-        g.setColour(juce::Colour::fromFloatRGBA(.125, 0.25f, 0.75f, 1));
+        g.setColour(juce::Colour::fromRGBA(0, 32, 16, 127));
         g.fillRect(currentStep * stepWidth, stepArea.getY(), stepWidth, stepArea.getHeight());
-
+        g.setColour(juce::Colour::fromRGB(26,86,91));
+        g.drawRect(currentStep * stepWidth, stepArea.getY(), stepWidth, stepArea.getHeight(), 1); // thickness = 2
+        
         // Draw border around active steps from 0 to currentStep (inclusive)
-        g.setColour(juce::Colours::white.withAlpha(0.9f));
-        g.drawRect(0, stepArea.getY(), (stepCount ) * stepWidth, stepArea.getHeight()-15, 2); // thickness = 2
+        g.setColour(juce::Colour::fromRGB(26,86,91));
+        g.drawRect(0, stepArea.getY(), (stepCount ) * stepWidth, stepArea.getHeight()-15, 1); // thickness = 2
     }
 }
 

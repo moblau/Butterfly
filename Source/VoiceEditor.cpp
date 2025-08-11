@@ -12,8 +12,8 @@ downsampleSlider("Downsample", apvts, voicePrefix),
 freqSlider("Frequency", apvts, voicePrefix),
 resSlider("Resonance", apvts, voicePrefix),
 resonatorOffsetSlider("Resonator Offset", apvts, voicePrefix),
-resonatorFeedbackSlider("Resonator Feedback", apvts, voicePrefix)
-
+resonatorFeedbackSlider("Resonator Feedback", apvts, voicePrefix),
+resonatorOffsetStrengthSlider("Offset Strength", apvts, voicePrefix)
 {
 //    setupSlider(panSlider,panSliderLabel,"Pan");
 //    setupSlider(detuneSlider,detuneSliderLabel,"Detune");
@@ -36,8 +36,9 @@ resonatorFeedbackSlider("Resonator Feedback", apvts, voicePrefix)
     addAndMakeVisible(resSlider);
     addAndMakeVisible(resonatorOffsetSlider);
     addAndMakeVisible(resonatorFeedbackSlider);
+    addAndMakeVisible(resonatorOffsetStrengthSlider);
     
-//    setupComboBox(modWaveformBox);
+    //    setupComboBox(modWaveformBox);
 //    setupComboBox(waveformBox);
     addAndMakeVisible(carrierWaveform);
     addAndMakeVisible(modWaveform);
@@ -55,6 +56,7 @@ resonatorFeedbackSlider("Resonator Feedback", apvts, voicePrefix)
     
     resOffsetAttach = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(apvts,  "res_offset"+voicePrefix, resonatorOffsetSlider.getSlider());
     resFeedbackAttach = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(apvts,  "res_feedback"+voicePrefix, resonatorFeedbackSlider.getSlider());
+    resOffsetStrengthAttach = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(apvts,  "res_offset_strength"+voicePrefix, resonatorOffsetStrengthSlider.getSlider());
 
 
     
@@ -145,14 +147,17 @@ void VoiceEditor::resized()
 
     width = left.getWidth()/2;
     modIndexSlider.setBounds(left.removeFromLeft(width));
-    modRatioNumSlider.setBounds(left.removeFromTop(left.getHeight()/2));
-    modRatioDenSlider.setBounds(left);
+    modRatioNumSlider.setBounds(left.getX(),left.getY(),left.getWidth()/4,left.getHeight()/2);
+    modRatioDenSlider.setBounds(left.getX(),left.getY()+ left.getHeight()/2,left.getWidth()/4,left.getHeight()/2);
     
     auto topRight = area.removeFromTop(area.getHeight()/2);
     freqSlider.setBounds(topRight.removeFromLeft(topRight.getWidth()/2));
     resSlider.setBounds(topRight);
-    resonatorOffsetSlider.setBounds(area.removeFromRight(area.getWidth()/2));
-    resonatorFeedbackSlider.setBounds(area);
+    auto w = area.getWidth()/3;
+    resonatorOffsetSlider.setBounds(area.removeFromLeft(w));
+    resonatorFeedbackSlider.setBounds(area.removeFromLeft(w));
+    resonatorOffsetStrengthSlider.setBounds(area);
+    
 //    placeLabelAboveSlider(panSliderLabel, panSlider,10,0);
 //    placeLabelAboveSlider(detuneSliderLabel, detuneSlider,10,0);
 //    placeLabelAboveSlider(downsampleSliderLabel, downsampleSlider,10,0);

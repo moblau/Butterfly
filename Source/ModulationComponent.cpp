@@ -49,15 +49,19 @@ void EnvelopeComponent::resized()
 // =============================
 // ModulationComponent definition
 // =============================
-ModulationComponent::ModulationComponent(juce::AudioProcessorValueTreeState& apvtsRef) : apvts(apvtsRef), amplitudeEnvelope(apvtsRef,0), filterEnvelope(apvtsRef,1)
+ModulationComponent::ModulationComponent(juce::AudioProcessorValueTreeState& apvtsRef) : apvts(apvtsRef), amplitudeEnvelope(apvtsRef,0), filterEnvelope(apvtsRef,1), modMatrix(apvtsRef)
 {
     tabComponent.addTab("Amplitude", juce::Colours::lightblue, &amplitudeEnvelope, false);
     tabComponent.addTab("Filter", juce::Colours::lightgreen, &filterEnvelope, false);
 
     addAndMakeVisible(tabComponent);
+    addAndMakeVisible(modMatrix);
 }
 
 void ModulationComponent::resized()
 {
-    tabComponent.setBounds(10, 10, 300, 200);
+    auto area = getLocalBounds();
+    auto topArea = area.removeFromTop(area.getHeight()/2);
+    tabComponent.setBounds(topArea.removeFromLeft(topArea.getWidth()/2));
+    modMatrix.setBounds(topArea);
 }

@@ -130,6 +130,23 @@ void FMVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
         float rawMod = getSample(tMod, modWaveform, false, 0.0f);
         modSignal = rawMod * modulationIndex;
 
+        float sumExternal = 0.0f;
+        for (int k = 0; k < 4; ++k)
+        {
+            const auto& M = extMod[k];
+            if (!M.enabled || M.amount01 <= 0.0f || M.freqHz <= 0.0f) continue;
+
+            // advance local phase at *oversampled* rate
+            extModPhase[k] = std::fmod(extModPhase[k] + (M.freqHz * twoPi / osSampleRate), twoPi);
+            float t = std::fmod(extModPhase[k] * inv2Pi, 1.0f); if (t < 0.0f) t += 1.0f;
+
+            float raw = getSample(t, (Waveform) M.waveform, false, 0.0f);
+            sumExternal += raw * M.index * M.amount01;
+        }
+
+        // add mirrored mod sources to your local FM signal
+        modSignal += sumExternal;
+        
         // 3) warped carrier phase
         float warped = std::fmod(phase + modSignal, twoPi);
         if (warped < 0.0f) warped += twoPi;
@@ -351,3 +368,11 @@ void FMVoice::setEnvelopeParams(const juce::ADSR::Parameters& newParams)
     envParams = newParams;
     env.setParameters(envParams);
 }
+
+
+void FMVoice::setExternalModSources(const ExternalModParams* srcs, int count)
+{
+    for (int i = 0; i < juce::jmin(count, 4); ++i)
+        extMod[i] = srcs[i];
+}
+

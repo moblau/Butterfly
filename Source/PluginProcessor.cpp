@@ -145,6 +145,25 @@ bool ButterflyAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts
 }
 #endif
 
+
+// Map matrix param (0..100) --> 0..1
+inline float amt01(const juce::AudioProcessorValueTreeState& apvts, int r, int c)
+{
+    auto* p = apvts.getRawParameterValue("mod_" + std::to_string(r+1) + "_" + std::to_string(c+1));
+    return p ? juce::jlimit<float>(0.0f, 100.0f, *p) / 100.0f : 0.0f;
+}
+
+struct VoiceInfo {
+    FMVoice* v = nullptr;
+    bool   active = false;
+    float  carHz = 0.0f;
+    float  modRatio = 1.0f;
+    int    modWave = 0;
+    float  modIndex = 0.0f;
+    int    note = -1;
+};
+
+
 void ButterflyAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
     int currentStep = 0;
@@ -180,6 +199,51 @@ void ButterflyAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
 //    
 //    
 //    float stepValue1 = *apvts.getRawParameterValue("seq1step" + juce::String(currentStep1));  // Access the value of the current step
+    
+    VoiceInfo infos[4];
+        int count = juce::jmin(4, synth.getNumVoices());
+        for (int i = 0; i < count; ++i)
+        {
+            auto* v = dynamic_cast<FMVoice*>(synth.getVoice(i));
+            if (!v) continue;
+
+            infos[i].v        = v;
+            infos[i].active   = v->isVoiceActive();
+            if (infos[i].active)
+            {
+                infos[i].note     = v->getMidiNote();
+                infos[i].carHz    = v->getCarrierFrequency();
+                infos[i].modRatio = v->getModulationRatio();
+                infos[i].modWave  = v->getModWaveform();
+                infos[i].modIndex = v->getModulationIndex();
+            }
+        }
+
+        // 2) Build and inject ExternalModParams for each carrier column c
+        for (int c = 0; c < count; ++c)
+        {
+            auto* vc = infos[c].v;
+            if (!vc) continue;
+
+            FMVoice::ExternalModParams ext[4];
+
+            for (int r = 0; r < count; ++r)
+            {
+                if (r == c) { ext[r].enabled = false; continue; } // optional: forbid self-mod here
+
+                const float a01 = amt01(apvts, r, c); // matrix[r][c] 0..1
+                if (!infos[r].active || a01 <= 0.0f) { ext[r].enabled = false; continue; }
+
+                ext[r].enabled  = true;
+                ext[r].waveform = infos[r].modWave;
+                ext[r].freqHz   = infos[r].carHz * infos[r].modRatio; // carrier_r * modRatio_r
+                ext[r].index    = infos[r].modIndex;                   // or a separate "bus index"
+                ext[r].amount01 = a01;
+            }
+
+            vc->setExternalModSources(ext, 4);
+        }
+    
     
     juce::MidiBuffer midiCopy(midiMessages);
     synth.updateSynthParameters();
@@ -271,6 +335,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout ButterflyAudioProcessor::cre
         
         parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
             juce::ParameterID("DOWNSAMPLE" + std::to_string(i), 1), "Downsample" + std::to_string(i), 0.0f, 50.0f, 1.0f));
+        
 
         parameters.push_back(std::make_unique<juce::AudioParameterChoice>(
             juce::ParameterID("MOD_WAVEFORM" + std::to_string(i), 1), "Mod Waveform " + std::to_string(i),
@@ -279,6 +344,9 @@ juce::AudioProcessorValueTreeState::ParameterLayout ButterflyAudioProcessor::cre
         parameters.push_back(std::make_unique<juce::AudioParameterChoice>(
             juce::ParameterID("WAVEFORM" + std::to_string(i), 1), "Waveform " + std::to_string(i),
             juce::StringArray{ "Sine", "Saw", "Square" }, 0));
+        
+        
+        
     }
 
     // Step Sequencer Parameters (8 steps)
@@ -393,6 +461,11 @@ juce::AudioProcessorValueTreeState::ParameterLayout ButterflyAudioProcessor::cre
             juce::ParameterID("res_offset" + juce::String(i), 1),
             "res_offset" + juce::String(i),
             0.0f, 1.0f, 0.0f));
+        
+        parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
+            juce::ParameterID("res_offset_strength" + juce::String(i), 1),
+            "res_offset_strength" + juce::String(i),
+            0.0f, 1.0f, 0.0f));
     }
     
     
@@ -435,6 +508,11 @@ juce::AudioProcessorValueTreeState::ParameterLayout ButterflyAudioProcessor::cre
         
         parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
             juce::ParameterID("Resonator Offset" + juce::String(i) + "modulate", 1),
+            "Resonator Offset" + juce::String(i) + "modulate",
+            0.0f, 1.0f, 0.0f));
+        
+        parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
+            juce::ParameterID("Offset Strength" + juce::String(i) + "modulate", 1),
             "Resonator Offset" + juce::String(i) + "modulate",
             0.0f, 1.0f, 0.0f));
 
@@ -516,6 +594,25 @@ juce::AudioProcessorValueTreeState::ParameterLayout ButterflyAudioProcessor::cre
             juce::NormalisableRange<float>(1.0f, 3.0, 0.01f),
             1.0f));
     }
+    
+    for (int mod = 1; mod <= 4; ++mod)
+    {
+        for (int car = 1; car <= 4; ++car)
+        {
+            auto paramID = "mod_" + std::to_string(mod) + "_" + std::to_string(car);
+            auto name    = "Mod " + std::to_string(mod) + "→" + std::to_string(car);
+
+            parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
+                juce::ParameterID(paramID, 1),
+                name,
+                juce::NormalisableRange<float>(0.0f, 100.0f, 1.0f),
+                0.0f
+            ));
+        }
+    }
+
+    
+    
     return { parameters.begin(), parameters.end() };
 }
 
