@@ -10,7 +10,7 @@ class FXChainComponent : public juce::Component
 public:
     FXChainComponent(juce::AudioProcessorValueTreeState& state);
     void resized() override;
-
+    void paint (juce::Graphics &g ) override;
 private:
     std::vector<std::unique_ptr<FXUnit>> fxUIBlocks;
     juce::AudioProcessorValueTreeState& apvts;

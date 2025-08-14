@@ -95,10 +95,10 @@ void ButterflyAudioProcessorEditor::resized()
 
     // Right side: FX panel
     auto fxArea = area.removeFromRight(columnWidth);
-    fxChainComponent.setBounds(fxArea.reduced(0, margin));
+    fxChainComponent.setBounds(fxArea);
 
     // Left/center: tabbed voices + sequencer
-    auto mainArea = area.reduced(margin);
+    auto mainArea = area.reduced(5);
     tabs.setBounds(mainArea);
 }
 

@@ -1,5 +1,6 @@
 #pragma once
 #include <JuceHeader.h>
+#include "ComponentUtility.h"
 
 class FXUnit : public juce::Component
 {

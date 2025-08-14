@@ -39,6 +39,7 @@ void EnvelopeComponent::resized()
 {
     auto area = getLocalBounds().reduced(25);
     auto sliderWidth = area.getWidth() / 4;
+    area.removeFromTop(15);
 
     attackSlider.setBounds(area.removeFromLeft(sliderWidth));
     decaySlider.setBounds(area.removeFromLeft(sliderWidth));
@@ -46,22 +47,32 @@ void EnvelopeComponent::resized()
     releaseSlider.setBounds(area);
 }
 
+void EnvelopeComponent::paint(juce::Graphics& g)
+{
+    g.setColour(juce::Colour::fromRGB(26,86,91));
+    auto bounds = getBounds().toFloat().reduced(10.0);
+    bounds.removeFromBottom(30);
+    g.drawRect(bounds,2);
+}
 // =============================
 // ModulationComponent definition
 // =============================
-ModulationComponent::ModulationComponent(juce::AudioProcessorValueTreeState& apvtsRef) : apvts(apvtsRef), amplitudeEnvelope(apvtsRef,0), filterEnvelope(apvtsRef,1), modMatrix(apvtsRef)
+ModulationComponent::ModulationComponent(juce::AudioProcessorValueTreeState& apvtsRef) : apvts(apvtsRef), amplitudeEnvelope(apvtsRef,0), filterEnvelope(apvtsRef,1), modMatrix(apvtsRef), modSequencer(8, 5, apvtsRef)
 {
-    tabComponent.addTab("Amplitude", juce::Colours::lightblue, &amplitudeEnvelope, false);
-    tabComponent.addTab("Filter", juce::Colours::lightgreen, &filterEnvelope, false);
+    tabComponent.addTab("Amplitude", juce::Colours::black, &amplitudeEnvelope, false);
+    tabComponent.addTab("Filter", juce::Colours::black, &filterEnvelope, false);
 
     addAndMakeVisible(tabComponent);
     addAndMakeVisible(modMatrix);
+    addAndMakeVisible(modSequencer);
 }
 
 void ModulationComponent::resized()
 {
     auto area = getLocalBounds();
-    auto topArea = area.removeFromTop(area.getHeight()/2);
+    modSequencer.setBounds(area.removeFromBottom(area.getHeight()*.35));
+    auto topArea = area;
     tabComponent.setBounds(topArea.removeFromLeft(topArea.getWidth()/2));
     modMatrix.setBounds(topArea);
+    
 }

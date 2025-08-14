@@ -10,6 +10,7 @@ public:
     ~VoiceEditor() override = default;
 
     void resized() override;
+    void paint(juce::Graphics& g) override;
 
 private:
     void placeLabelLeftOfSlider(juce::Label& label, const juce::Slider& slider, int labelWidth, int spacing);
@@ -40,7 +41,7 @@ private:
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> panAttach, detuneAttach, modIndexAttach, modRatioNumAttach, modRatioDenAttach, downsampleAttach, resOffsetAttach, resFeedbackAttach, resOffsetStrengthAttach;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> modWaveformAttach, waveformAttach;
 
-    
+    std::unique_ptr<WaveformVisualizer> oscPreview;
 //    juce::Slider freqSlider, resSlider;
 //    juce::Label freqSliderLabel, resSliderLabel;
     

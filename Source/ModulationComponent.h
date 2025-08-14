@@ -1,6 +1,7 @@
 #pragma once
 
 #include <JuceHeader.h>
+#include "StepSequencer.h"
 
 // ------------------------------------
 // EnvelopeComponent (standalone class)
@@ -10,6 +11,7 @@ class EnvelopeComponent : public juce::Component
 public:
     EnvelopeComponent(juce::AudioProcessorValueTreeState& apvtsRef, int i);
     void resized() override;
+    void paint(juce::Graphics& g) override;
 
     juce::Slider attackSlider, decaySlider, sustainSlider, releaseSlider;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> attackAttach, decayAttach, sustainAttach, releaseAttach;
@@ -46,6 +48,8 @@ public:
                 addAndMakeVisible(sliders.back().get());
             }
         }
+        addAndMakeVisible(modMatrixTitle);
+        modMatrixTitle.setText("Intermodulation Matrix", juce::NotificationType::dontSendNotification);
     }
 
     void resized() override
@@ -63,11 +67,20 @@ public:
             }
         }
     }
+    void paint(juce::Graphics& g) override
+    {
+        auto border = getLocalBounds();
+        auto title = border.removeFromTop(border.getHeight()*.08);
+        modMatrixTitle.setBounds(title);
+        g.setColour(juce::Colours::grey);
+        g.drawRect(border,1);
+    }
 
 private:
     juce::AudioProcessorValueTreeState& apvts;
     std::vector<std::unique_ptr<juce::Slider>> sliders;
     std::vector<std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>> attachments;
+    juce::Label modMatrixTitle;
 };
 
 // ------------------------------------
@@ -78,13 +91,13 @@ class ModulationComponent : public juce::Component
 public:
     ModulationComponent(juce::AudioProcessorValueTreeState& apvtsRef);
     void resized() override;
-
-private:
+    private:
     EnvelopeComponent amplitudeEnvelope;
     EnvelopeComponent filterEnvelope;
     juce::TabbedComponent tabComponent { juce::TabbedButtonBar::TabsAtTop };
     juce::AudioProcessorValueTreeState& apvts;
     
+    StepSequencer modSequencer;
     ModMatrixComponent modMatrix;
 };
 

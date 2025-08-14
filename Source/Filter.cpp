@@ -16,6 +16,8 @@ void Filter::prepare(double sampleRate, int samplesPerBlock)
         std::fill(channelState.begin(), channelState.end(), 0.0);
     
     adsr.setSampleRate(sampleRate);
+    cutoffSmoothed.reset(sampleRate, 0.005); // 5 ms ramp
+    cutoffSmoothed.setCurrentAndTargetValue(juce::jlimit(20.0, 20000.0, fc));
 }
 
 void Filter::reset(){
@@ -42,6 +44,20 @@ void Filter::computeCoeffs(double modulatedFc)
 
 void Filter::update()
 {
+    
+    float rawDrive =  *apvts.getRawParameterValue("filter_drive");
+
+    driveParam = juce::jlimit(0.0f, 1.0f, rawDrive);
+
+    // Map 0..1 → 0 dB..+24 dB input gain (tweak max dB to taste)
+    constexpr float maxDriveDb = 36.0;
+    preGain  = juce::Decibels::decibelsToGain(driveParam * maxDriveDb);
+
+    // Small-signal unity gain compensation:
+    // slope of shaper near 0 ≈ preGain, so divide by preGain
+    postGain = (preGain > 0.0 ? 1.0 / preGain : 1.0);
+    
+    
     float freqParam, resParam;
 
     if ( usesEnvelope ){
@@ -61,25 +77,25 @@ void Filter::update()
         adsr.setParameters(envParams);
     }
     else{
-//        bool modFreqActive = *apvts.getRawParameterValue("Frequency" + juce::String(filterIndex) + "modulate");
-//        bool modResActive = *apvts.getRawParameterValue("Resonance" + juce::String(filterIndex) + "modulate");
+        bool modFreqActive = *apvts.getRawParameterValue("Frequency" + juce::String(filterIndex) + "modulate");
+        bool modResActive = *apvts.getRawParameterValue("Resonance" + juce::String(filterIndex) + "modulate");
         
-//        int currentStep = static_cast<int>(*apvts.getRawParameterValue("seq" + juce::String(filterIndex) + "CURRENT_STEP"));
-//        float stepValue = *apvts.getRawParameterValue("seq" + juce::String(filterIndex) + "step" + juce::String(currentStep));
+        int currentStep = static_cast<int>(*apvts.getRawParameterValue("seq" + juce::String(filterIndex) + "CURRENT_STEP"));
+        float stepValue = *apvts.getRawParameterValue("seq" + juce::String(filterIndex) + "step" + juce::String(currentStep));
         
         float filterSeq = 0;
-//        if ( modFreqActive ){
-//            filterSeq = stepValue*20000.0f;
-//        }
+        if ( modFreqActive ){
+            filterSeq = stepValue*20000.0f;
+        }
         float resSeq = 0;
-//        if ( modResActive ){
-//            resSeq = stepValue*3.0f;
-//        }
-//        freqParam = juce::jlimit(20.0f,20000.0f,*apvts.getRawParameterValue("filter_freq" + juce::String(filterIndex))+filterSeq);
-//        resParam  = juce::jlimit(0.0f,3.0f,*apvts.getRawParameterValue("filter_res" + juce::String(filterIndex))+resSeq);
+        if ( modResActive ){
+            resSeq = stepValue*3.0f;
+        }
+        freqParam = juce::jlimit(20.0f,20000.0f,*apvts.getRawParameterValue("filter_freq" + juce::String(filterIndex))+filterSeq);
+        resParam  = juce::jlimit(0.0f,3.0f,*apvts.getRawParameterValue("filter_res" + juce::String(filterIndex))+resSeq);
 
-        freqParam = *apvts.getRawParameterValue("filter_freq" + juce::String(filterIndex));
-        resParam  = *apvts.getRawParameterValue("filter_res" + juce::String(filterIndex));
+//        freqParam = *apvts.getRawParameterValue("filter_freq" + juce::String(filterIndex));
+//        resParam  = *apvts.getRawParameterValue("filter_res" + juce::String(filterIndex));
     }
 
     fc = freqParam;
@@ -88,8 +104,9 @@ void Filter::update()
 
     K = mapDoubleValue(Q, 1, 0, 2);
 
-    computeCoeffs(fc);
-
+    cutoffSmoothed.setTargetValue(juce::jlimit(20.0, 20000.0, static_cast<double>(fc)));
+    double smoothFc = cutoffSmoothed.getNextValue();  // <- smoothed value
+    computeCoeffs(smoothFc);
 
 
 }
@@ -143,17 +160,26 @@ void Filter::process(juce::AudioBuffer<float>& buffer)
             if (fc == 22000){
                 return;
             }
-            if (usesEnvelope){
-                double envValue = adsr.getNextSample();
-                double modulatedFc = fc;
-                if (i % 8 == 0)
-                        computeCoeffs(modulatedFc);
+            if (usesEnvelope) {
+                double env = adsr.getNextSample();
+                float envMag = *apvts.getRawParameterValue("filter_env");
+                double targetFc = juce::jlimit(20.0, 20000.0, fc + env * envMag * 22000.0);
+                cutoffSmoothed.setTargetValue(targetFc);
+            } else {
+                cutoffSmoothed.setTargetValue(juce::jlimit(20.0, 20000.0, static_cast<double>(fc)));
             }
-            else{
-                computeCoeffs(fc);
-            }
+
+            double modFc = cutoffSmoothed.getNextValue();  // smoothed per-sample value
+            computeCoeffs(modFc);
             
             double input = channelData[i];
+            if (driveParam > 0.0f)
+            {
+                const float x = static_cast<float>(input * preGain);
+                const float y = softClip(x);        // or std::tanh(x)
+                input = static_cast<double>(y) * postGain;
+            }
+            
             double sigma = 0.0;
 
             for (int p = 0; p < numActivePoles; ++p)

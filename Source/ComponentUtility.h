@@ -242,3 +242,255 @@ private:
         JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(WaveformSelector)
 };
 
+// WaveformVisualizer.h/.cpp (or add near ComponentUtility if you prefer)
+#pragma once
+#include <JuceHeader.h>
+
+class WaveformVisualizer : public juce::Component,
+                           private juce::AudioProcessorValueTreeState::Listener,
+                           private juce::Timer
+{
+public:
+    WaveformVisualizer(juce::AudioProcessorValueTreeState& s, const juce::String& voicePrefix)
+        : apvts(s), prefix(voicePrefix)
+    {
+        // Listen to all relevant params for this voice
+        addParamListener("WAVEFORM"     + prefix);
+        addParamListener("MOD_WAVEFORM" + prefix);
+        addParamListener("MOD_RATIO_NUM"+ prefix);
+        addParamListener("MOD_RATIO_DEN"+ prefix);
+        addParamListener("MOD_INDEX"    + prefix);
+
+        // Pre-allocate
+        carrierBuf.resize(sampleCount);
+        modBuf.resize(sampleCount);
+        outBuf.resize(sampleCount);
+        
+        buildPreview();
+        startTimerHz(30); // light refresh for smooth UI
+        setOpaque(false);
+    }
+
+    ~WaveformVisualizer() override
+    {
+        for (auto& id : listenedIDs)
+            apvts.removeParameterListener(id, this);
+    }
+    void paint(juce::Graphics& g) override
+    {
+        g.fillAll(juce::Colours::transparentBlack);
+
+        auto r = getLocalBounds().reduced(8);
+        drawOverlayScope(g, r, carrierBuf, modBuf, outBuf);
+    }
+
+    static float mapSampleY(float v, const juce::Rectangle<int>& plot)
+    {
+        return juce::jmap(v, -1.0f, 1.0f, (float)plot.getBottom(), (float)plot.getY());
+    }
+
+    void drawOverlayScope(juce::Graphics& g,
+                          juce::Rectangle<int> r,
+                          const std::vector<float>& carrier,
+                          const std::vector<float>& mod,
+                          const std::vector<float>& out)
+    {
+        // Frame, midline, labels
+        g.setColour(juce::Colours::white.withAlpha(0.2f));
+        g.drawRect(r, 1);
+        auto plot = r.reduced(6, 6);
+        const float midY = plot.getY() + plot.getHeight() * 0.5f;
+        g.setColour(juce::Colours::white.withAlpha(0.15f));
+        g.drawLine((float)plot.getX(), midY, (float)plot.getRight(), midY);
+
+        // Helper to draw one vector mapped across full width
+        auto drawPath = [&](const std::vector<float>& data, juce::Colour colour)
+        {
+            if (data.size() < 2) return;
+            juce::Path p;
+            const int N = (int)data.size();
+            const float w = (float)plot.getWidth();
+            const float x0 = (float)plot.getX();
+            const float step = (N > 1) ? (w - 1.0f) / (float)(N - 1) : w;
+
+            p.startNewSubPath(x0, mapSampleY(data[0], plot));
+            for (int i = 1; i < N; ++i)
+            {
+                const float x = x0 + step * (float)i;
+                const float y = mapSampleY(data[i], plot);
+                p.lineTo(x, y);
+            }
+            g.setColour(colour.withAlpha(0.95f));
+            g.strokePath(p, juce::PathStrokeType(1.0f, juce::PathStrokeType::curved, juce::PathStrokeType::rounded));
+        };
+
+        // Draw order: mod (under), carrier, FM out (on top)
+        drawPath(mod,     juce::Colours::mediumpurple);
+        drawPath(carrier, juce::Colours::skyblue);
+        drawPath(out,     juce::Colours::limegreen);
+
+        // Tiny legend
+//        auto legend = r.removeFromTop(18);
+//        g.setFont(12.0f);
+//        auto dot = [&](juce::Colour c, const juce::String& text, int x)
+//        {
+//            g.setColour(c); g.fillEllipse((float)x, (float)legend.getY()+4, 8.0f, 8.0f);
+//            g.setColour(juce::Colours::white.withAlpha(0.8f));
+//            g.drawText(text, x + 12, legend.getY()+1, 70, legend.getHeight(), juce::Justification::centredLeft);
+//        };
+//        int x = legend.getX() + 6;
+//        dot(juce::Colours::mediumpurple, "Mod", x); x += 78;
+//        dot(juce::Colours::skyblue,      "Carrier", x); x += 90;
+//        dot(juce::Colours::limegreen,    "FM Out", x);
+    }
+
+private:
+    juce::AudioProcessorValueTreeState& apvts;
+    juce::String prefix;
+    std::vector<float> carrierBuf, modBuf, outBuf;
+    std::vector<juce::String> listenedIDs;
+
+    // Visualization settings
+    static constexpr int sampleCount = 1024;      // screen resolution for curves
+    static constexpr float carrierCycles = 2.5f;  // how many carrier periods across the width
+    static constexpr float twoPi = juce::MathConstants<float>::twoPi;
+
+    // Cached params (updated on timer)
+    int carrierWaveIdx = 0;   // 0=Sine,1=Saw,2=Square
+    int modWaveIdx     = 0;
+    int num            = 1;
+    int den            = 1;
+    float modIndex     = 0.0f;  // your param is 0..50; here it’s treated as radians directly (feel free to rescale)
+
+    void addParamListener(const juce::String& id)
+    {
+        listenedIDs.push_back(id);
+        apvts.addParameterListener(id, this);
+    }
+
+    // ======= DSP helpers =======
+    static inline float wrap01(float x)          { x -= std::floor(x); return x; }
+    static inline float phasor(float phase)      { return wrap01(phase / twoPi); }
+
+    static float oscSample(int typeIndex, float phase)
+    {
+        // typeIndex: 0=Sine, 1=Saw, 2=Square
+        float t = phasor(phase);     // [0,1)
+        switch (typeIndex)
+        {
+            case 0: // Sine
+                return std::sin(phase);
+            case 1: // Saw (bipolar)
+                return 2.0f * t - 1.0f;
+            case 2: // Square (50% duty)
+                return (t < 0.5f) ? 1.0f : -1.0f;
+            default:
+                return std::sin(phase);
+        }
+    }
+
+    void buildPreview()
+    {
+        // Pull current values atomically from APVTS
+        if (auto* p = dynamic_cast<juce::AudioParameterChoice*>(apvts.getParameter("WAVEFORM" + prefix)))
+            carrierWaveIdx = p->getIndex();
+        if (auto* p = dynamic_cast<juce::AudioParameterChoice*>(apvts.getParameter("MOD_WAVEFORM" + prefix)))
+            modWaveIdx = p->getIndex();
+        if (auto* p = dynamic_cast<juce::AudioParameterInt*>(apvts.getParameter("MOD_RATIO_NUM" + prefix)))
+            num = juce::jmax(1, p->get());
+        if (auto* p = dynamic_cast<juce::AudioParameterInt*>(apvts.getParameter("MOD_RATIO_DEN" + prefix)))
+            den = juce::jmax(1, p->get());
+        if (auto* p = dynamic_cast<juce::AudioParameterFloat*>(apvts.getParameter("MOD_INDEX" + prefix)))
+            modIndex = p->get(); // treat as radians; rescale if you prefer
+
+        // Normalized time over [0, 1). We’ll draw carrierCycles across the width
+        // Carrier angular freq (in “cycles-per-window” units):
+        const float wc = twoPi * carrierCycles;
+        const float wm = wc * (static_cast<float>(num) / static_cast<float>(den)); // ratio w.r.t carrier
+
+        float carPhase, modPhase, pmPhase;
+
+        for (int n = 0; n < sampleCount; ++n)
+        {
+            float t = static_cast<float>(n) / static_cast<float>(sampleCount); // 0..1
+            carPhase = wc * t;
+            modPhase = wm * t;
+
+            const float m = oscSample(modWaveIdx, modPhase);       // [-1, 1]
+            const float c = oscSample(carrierWaveIdx, carPhase);   // unmodded carrier
+
+            // Phase modulation: out(t) = carrier( phase_c + I * m(t) )
+            // This is stable and visually representative of FM for our UI.
+            pmPhase = carPhase + (modIndex * m);
+
+            const float yOut = oscSample(carrierWaveIdx, pmPhase);
+
+            carrierBuf[n] = c;
+            modBuf[n]     = m;
+            outBuf[n]     = yOut;
+        }
+    }
+//
+//    static void drawScope(juce::Graphics& g,
+//                          juce::Rectangle<int> r,
+//                          const std::vector<float>& data,
+//                          juce::Colour colour,
+//                          const char* title)
+//    {
+//        // Frame + title
+//        g.setColour(juce::Colours::white.withAlpha(0.2f));
+//        g.drawRect(r, 1);
+//        g.setColour(juce::Colours::white.withAlpha(0.8f));
+//        g.setFont(12.0f);
+//        g.drawText(title, r.removeFromTop(16), juce::Justification::centredLeft);
+//
+//        if (data.empty())
+//            return;
+//
+//        // Axis baseline
+//        auto plot = r.reduced(6, 6);
+//        const int w = plot.getWidth();
+//        const int h = plot.getHeight();
+//        const float midY = plot.getY() + h * 0.5f;
+//
+//        g.setColour(juce::Colours::white.withAlpha(0.15f));
+//        g.drawLine((float)plot.getX(), midY, (float)plot.getRight(), midY);
+//
+//        // Polyline
+//        juce::Path p;
+//        const int N = juce::jmin((int)data.size(), w); // 1 px per sample
+//        if (N <= 1) return;
+//
+//        auto x0 = (float)plot.getX();
+//        auto y0 = juce::jmap(data[0], -1.0f, 1.0f, (float)plot.getBottom(), (float)plot.getY());
+//        p.startNewSubPath(x0, y0);
+//        for (int i = 1; i < N; ++i)
+//        {
+//            const float x = (float)plot.getX() + (float)i;
+//            const float y = juce::jmap(data[i], -1.0f, 1.0f, (float)plot.getBottom(), (float)plot.getY());
+//            p.lineTo(x, y);
+//        }
+//
+//        g.setColour(colour.withAlpha(0.95f));
+//        g.strokePath(p, juce::PathStrokeType(1.8f, juce::PathStrokeType::JointStyle::curved,
+//                                                juce::PathStrokeType::EndCapStyle::rounded));
+//    }
+
+    // APVTS listener
+    void parameterChanged(const juce::String&, float) override
+    {
+        // Just mark dirty; we rebuild on the timer thread (message thread via repaint)
+        needsRebuild = true;
+    }
+
+    void timerCallback() override
+    {
+        if (needsRebuild.exchange(false))
+        {
+            buildPreview();
+            repaint();
+        }
+    }
+
+    std::atomic<bool> needsRebuild { true };
+};

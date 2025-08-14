@@ -36,8 +36,8 @@ void CustomLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int wi
 
      // Accent palette
      const bool  modOn     = (isModulated != 0);
-     const auto  accentB   = modOn ? juce::Colour::fromRGB(32,0,63) : juce::Colour::fromRGB(64,16,128);
-     const auto  accentA   = modOn ? juce::Colour::fromRGB(16, 0,64) : juce::Colour::fromRGB(32, 0,96);
+     const auto  accentB   = juce::Colour::fromRGB(64,16,128);
+     const auto  accentA   = juce::Colour::fromRGB(32, 0,96);
 
      // ---------------- Background arc ----------------
      {
@@ -71,12 +71,19 @@ void CustomLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int wi
          g.fillEllipse(cx - glowR, cy - glowR, glowR * 2.0f, glowR * 2.0f);
      }
 
-     // ---------------- Knob face (flat) ----------------
-//     {
-//         const float faceR = radius * 0.78f;
-//         g.setColour(juce::Colour::fromRGB(32  , 32, 32));
-//         g.fillEllipse(cx - faceR, cy - faceR, faceR * 2.0f, faceR * 2.0f);
-//     }
+    // ---------------- Mod On Indicator ----------------
+    if (modOn)
+    {
+        const float indicatorR = 2; // small relative size
+        const float indicatorCx = cx;           // center X stays the same
+        const float indicatorCy = cy + radius * 0.7f; // push down near bottom edge
+
+        g.setColour(juce::Colour::fromRGB(140,52,31));
+        g.fillEllipse(indicatorCx - indicatorR,
+                      indicatorCy - indicatorR,
+                      indicatorR * 2.0f,
+                      indicatorR * 2.0f);
+    }
 
      // ---------------- Pointer ----------------
     // ----- Pointer that starts at the face edge, leaving the centre blank -----

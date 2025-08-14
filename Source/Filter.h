@@ -44,4 +44,18 @@ private:
     juce::ADSR adsr;
     
     void calcCoefficients();
+    
+    // In Filter class (private:)
+    float driveParam = 0.0f;     // 0..1 from the UI
+    double preGain = 1.0;        // input gain before shaper
+    double postGain = 1.0;       // makeup to keep small-signal unity
+
+    static inline float softClip(float x) noexcept
+    {
+        // Smooth, cheap, good-sounding. Swap for std::tanh(x) if you prefer.
+        // Cubic soft clip (odd polynomial), ~tanh-like curve:
+        const float a = juce::jlimit(-2.0f, 2.0f, x);
+        return a - (a * a * a) / 3.0f;
+    }
+    juce::SmoothedValue<double, juce::ValueSmoothingTypes::Linear> cutoffSmoothed;
 };

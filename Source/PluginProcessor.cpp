@@ -350,7 +350,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout ButterflyAudioProcessor::cre
     }
 
     // Step Sequencer Parameters (8 steps)
-    for (int j = 1; j <= 4; ++j)
+    for (int j = 1; j <= 5; ++j)
     {
         for (int i = 0; i < 8; ++i)
         {
@@ -366,7 +366,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout ButterflyAudioProcessor::cre
     }
 
     
-    for (int j = 1; j <= 4; ++j)
+    for (int j = 1; j <= 5; ++j)
     {
         parameters.push_back(std::make_unique<juce::AudioParameterInt>(
             juce::ParameterID("seq" + juce::String(j) + "STEP_COUNT", 1),
@@ -531,13 +531,13 @@ juce::AudioProcessorValueTreeState::ParameterLayout ButterflyAudioProcessor::cre
     
     
     parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID("res_filterfreq", 1), "res_filterfreq", 20.0f,22000.0f, 1000.0f));
+        juce::ParameterID("res_filterfreq", 1), "res_filterfreq", 20.0f,22000.0f, 22000.0f));
     
     parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID("filter_freq", 1),
         "filter_freq",
         juce::NormalisableRange<float>(20.0f, 22000.0f, 0.01f, 0.25f), // Skewed for perceptual tuning
-        1000.0f));
+                                                                     22000.0f));
 
     parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID("filter_res", 1),
@@ -546,10 +546,14 @@ juce::AudioProcessorValueTreeState::ParameterLayout ButterflyAudioProcessor::cre
         1.0f));
 
     parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID("filter_env", 1),
+        "filter_env",
+        -1,1,0));
+    
+    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID("filter_drive", 1),
         "filter_drive",
-        juce::NormalisableRange<float>(1.0f, 4.0f, 1.0f),
-        1.0f));
+        0,1,0));
     juce::NormalisableRange<float> envRange { 0.0f, 5000.0f, 1.0f };
     envRange.setSkewForCentre(500.0f); // midpoint skew
 

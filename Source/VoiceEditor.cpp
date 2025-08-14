@@ -66,6 +66,8 @@ resonatorOffsetStrengthSlider("Offset Strength", apvts, voicePrefix)
 
     aliasToggleAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(apvts,  voicePrefix+"AliasToggle", aliasToggle);
 
+    oscPreview = std::make_unique<WaveformVisualizer>(apvts, voicePrefix);
+        addAndMakeVisible(*oscPreview);
     
 }
 
@@ -137,26 +139,37 @@ void VoiceEditor::resized()
     carrierWaveform.setBounds(topLeft.removeFromTop(topLeft.getHeight()/4));
     auto width = topLeft.getWidth()/4;
     
-    panSlider.setBounds(topLeft.removeFromLeft(width));
-    detuneSlider.setBounds(topLeft.removeFromLeft(width));
-    downsampleSlider.setBounds(topLeft.removeFromLeft(width));
+    panSlider.setBounds(topLeft.removeFromLeft(width).withHeight(110)
+        .withY(topLeft.getY() + (topLeft.getHeight() - 110) / 2));
+
+    detuneSlider.setBounds(topLeft.removeFromLeft(width).withHeight(110)
+        .withY(topLeft.getY() + (topLeft.getHeight() - 110) / 2));
+
+    downsampleSlider.setBounds(topLeft.removeFromLeft(width).withHeight(110)
+        .withY(topLeft.getY() + (topLeft.getHeight() - 110) / 2));
     aliasToggle.setBounds(topLeft.removeFromLeft(width));
     
 //    modWaveformBox.setBounds(left.removeFromTop(left.getHeight()/4));
     modWaveform.setBounds(left.removeFromTop(left.getHeight()/4));
 
-    width = left.getWidth()/2;
+    width = left.getWidth()/3;
     modIndexSlider.setBounds(left.removeFromLeft(width));
     modRatioNumSlider.setBounds(left.getX(),left.getY(),left.getWidth()/4,left.getHeight()/2);
     modRatioDenSlider.setBounds(left.getX(),left.getY()+ left.getHeight()/2,left.getWidth()/4,left.getHeight()/2);
     
+    oscPreview->setBounds(left.getX()+left.getWidth()/4,left.getY(),left.getWidth()*3/4,left.getHeight());
     auto topRight = area.removeFromTop(area.getHeight()/2);
-    freqSlider.setBounds(topRight.removeFromLeft(topRight.getWidth()/2));
-    resSlider.setBounds(topRight);
+    freqSlider.setBounds(topRight.removeFromLeft(topRight.getWidth()/2).reduced(10));
+    resSlider.setBounds(topRight.reduced(10));
     auto w = area.getWidth()/3;
-    resonatorOffsetSlider.setBounds(area.removeFromLeft(w));
-    resonatorFeedbackSlider.setBounds(area.removeFromLeft(w));
-    resonatorOffsetStrengthSlider.setBounds(area);
+    resonatorOffsetSlider.setBounds(area.removeFromLeft(w).withHeight(140)
+        .withY(area.getY() + (area.getHeight() - (140)) / 2));
+
+    resonatorFeedbackSlider.setBounds(area.removeFromLeft(w).withHeight((140))
+        .withY(area.getY() + (area.getHeight() - (140)) / 2));
+
+    resonatorOffsetStrengthSlider.setBounds(area.withHeight((140))
+        .withY(area.getY() + (area.getHeight() - (140)) / 2));
     
 //    placeLabelAboveSlider(panSliderLabel, panSlider,10,0);
 //    placeLabelAboveSlider(detuneSliderLabel, detuneSlider,10,0);
@@ -192,3 +205,23 @@ void VoiceEditor::placeLabelAboveSlider(juce::Label& label, const juce::Slider& 
 }
                              
 void updateSynthParameters(juce::AudioProcessorValueTreeState& apvts, float stepValue);
+
+void VoiceEditor::paint(juce::Graphics& g)
+{
+    auto area = getLocalBounds().toFloat().reduced(0.5f); // inset for crisp lines
+
+    g.setColour(juce::Colours::grey);
+
+    // Draw the outer border
+    g.drawRect(area, 1.0f);
+
+    // Calculate midpoints
+    float midX = area.getX() + area.getWidth()  * 0.5f;
+    float midY = area.getY() + area.getHeight() * 0.5f;
+
+    // Vertical center line
+    g.drawLine(midX, area.getY(), midX, area.getBottom(), 1.0f);
+
+    // Horizontal center line
+    g.drawLine(area.getX(), midY, area.getRight(), midY, 1.0f);
+}

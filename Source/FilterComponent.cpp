@@ -1,51 +1,66 @@
 #include "FilterComponent.h"
 
 FilterComponent::FilterComponent(juce::AudioProcessorValueTreeState& apvtsRef)
-    : FXUnit(apvtsRef)
+: FXUnit(apvtsRef), freqSlider("Frequency", apvtsRef, juce::String(5)),
+resSlider("Resonance", apvtsRef, juce::String(5)),
+envSlider("Envelope", apvtsRef, juce::String(5)),
+driveSlider("Drive", apvtsRef, juce::String(5))
 {
     setSize(200, 200);
 
     // --- Feedback Slider ---
-    freqSlider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-    freqSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 20);
-    freqSlider.setRange(20, 22000.0, 1);
+
     addAndMakeVisible(freqSlider);
 
     freqSliderAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        apvtsRef, "filter_freq", freqSlider);
+        apvtsRef, "filter_freq", freqSlider.getSlider());
 
     // --- Dry/Wet Slider ---
-    resSlider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-    resSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 20);
-    resSlider.setRange(1.0, 3.0, .1);
+
     addAndMakeVisible(resSlider);
 
     resSliderAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        apvtsRef, "filter_res", resSlider);
+        apvtsRef, "filter_res", resSlider.getSlider());
 
-    // --- Ratio Slider ---
-    driveSlider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-    driveSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 20);
-    driveSlider.setRange(1.0, 4.0, 1.0);
+    addAndMakeVisible(envSlider);
+    
+    envSliderAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
+        apvtsRef, "filter_env", envSlider.getSlider());
+    
+    
+    
     addAndMakeVisible(driveSlider);
     
     driveSliderAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        apvtsRef, "filter_drive", driveSlider);
+        apvtsRef, "filter_drive", driveSlider.getSlider());
     
+
 }
 
 void FilterComponent::resized()
 {
-    auto area = getLocalBounds().reduced(10);
-
+    auto area = getLocalBounds();
+    area.removeFromTop(30);
     // Top row for freq and res
-    auto topRow = area.removeFromTop(100);
+    auto topRow = area.removeFromTop(area.getHeight()/2);
     auto freqArea = topRow.removeFromLeft(topRow.getWidth() / 2);
     freqSlider.setBounds(freqArea);
     resSlider.setBounds(topRow); // remaining right half
-
+    envSlider.setBounds(area.removeFromLeft(area.getWidth()/2));
+    driveSlider.setBounds(area);
     // Bottom left for drive slider
 //    auto bottomRow = area.removeFromTop(100); // leave room at bottom
 //    auto driveWidth = getWidth() / 2;
 //    driveSlider.setBounds(area.removeFromLeft(driveWidth));
+}
+
+void FilterComponent::paint(juce::Graphics& g)
+{
+    g.setColour (juce::Colours::white);
+    g.setFont (15.0f);
+    g.drawFittedText ("Global Filter", getLocalBounds().removeFromTop(30), juce::Justification::centred, 1);
+    
+    auto bounds = getLocalBounds();
+    g.setColour(juce::Colours::grey);
+    g.drawRect(bounds,1);
 }

@@ -40,11 +40,11 @@ private:
     juce::ToggleButton modAmountButton;
     juce::ToggleButton modGainButton;
     
-    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> modAmountAttachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> modNumeratorAttachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> modDenominatorAttachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> modGainButtonAttachment;
-    
+//    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> modAmountAttachment;
+//    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> modNumeratorAttachment;
+//    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> modDenominatorAttachment;
+//    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> modGainButtonAttachment;
+//    
     
     juce::Slider stepCountSlider;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> stepCountSliderAttachment;
