@@ -3,7 +3,7 @@
 
 CustomLookAndFeel::CustomLookAndFeel()
 {
-    setColour(juce::ResizableWindow::backgroundColourId, JUCE_LIVE_CONSTANT (juce::Colour (0xFFFF00))); // dark slate-like
+    setColour(juce::ResizableWindow::backgroundColourId, juce::Colour (0x000000)); // dark slate-like
 }
 
 CustomLookAndFeel::~CustomLookAndFeel()
@@ -83,6 +83,7 @@ void CustomLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int wi
                       indicatorCy - indicatorR,
                       indicatorR * 2.0f,
                       indicatorR * 2.0f);
+
     }
 
      // ---------------- Pointer ----------------

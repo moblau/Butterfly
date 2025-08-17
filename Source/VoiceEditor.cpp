@@ -15,6 +15,7 @@ resonatorOffsetSlider("Resonator Offset", apvts, voicePrefix),
 resonatorFeedbackSlider("Resonator Feedback", apvts, voicePrefix),
 resonatorOffsetStrengthSlider("Offset Strength", apvts, voicePrefix)
 {
+    this->voicePrefix = voicePrefix;
 //    setupSlider(panSlider,panSliderLabel,"Pan");
 //    setupSlider(detuneSlider,detuneSliderLabel,"Detune");
 //    setupSlider(modIndexSlider,modIndexSliderLabel,"Mod Amount");

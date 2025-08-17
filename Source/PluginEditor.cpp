@@ -53,6 +53,7 @@ ButterflyAudioProcessorEditor::ButterflyAudioProcessorEditor (ButterflyAudioProc
 
 ButterflyAudioProcessorEditor::~ButterflyAudioProcessorEditor() {
     setLookAndFeel(nullptr);
+    stopTimer();
 }
 
 void ButterflyAudioProcessorEditor::paint (juce::Graphics& g)

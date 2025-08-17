@@ -54,5 +54,6 @@ private:
     
     void toggleAlias();
     bool shouldAlias = false;
+    juce::String voicePrefix;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (VoiceEditor)
 };

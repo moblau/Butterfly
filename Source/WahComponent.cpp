@@ -12,7 +12,7 @@ delaySlider("Delay", apvtsRef,juce::String(5))
     // Attach toggle to a boolean parameter "WahUseSync" in the APVTS.
 //    syncToggleAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(
 //        apvts, "WahUseSync", syncToggle);
-    syncToggleAttachment.reset( new ButtonAttachment(apvtsRef, "WahUseSync", syncToggle));
+    syncToggleAttachment=std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(apvtsRef, "WahUseSync", syncToggle);
     // Whenever the toggle changes, show/hide the appropriate control:
     syncToggle.onClick = [this]() { updateSliderVisibility(); };
     
@@ -30,7 +30,7 @@ delaySlider("Delay", apvtsRef,juce::String(5))
     addAndMakeVisible(syncRateBox);
 //    syncRateAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(
 //        apvts, "WahSyncRate", syncRateBox);
-    syncRateAttachment.reset( new ComboBoxAttachment(apvtsRef, "WahSyncRate", syncRateBox));
+    syncRateAttachment= std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(apvtsRef, "WahSyncRate", syncRateBox);
     updateSliderVisibility();
     
 //    freqSlider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
@@ -38,14 +38,14 @@ delaySlider("Delay", apvtsRef,juce::String(5))
 //    freqSlider.setRange(1.0, 50.0, 0.1);
 //    freqSlider.setTextValueSuffix(" Hz");
     addAndMakeVisible(freqSlider);
-    freqAttachment.reset (new Attachment (apvtsRef, "wahFreq", freqSlider.getSlider()));
+    freqAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(apvtsRef, "wahFreq", freqSlider.getSlider());
 
     // Feedback: 0–1
 //    feedbackSlider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
 //    feedbackSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 20);
 //    feedbackSlider.setRange(0.0, 1.0, 0.01);
     addAndMakeVisible(feedbackSlider);
-    feedbackAttachment.reset (new Attachment (apvtsRef, "wahFeedback", feedbackSlider.getSlider()));
+    feedbackAttachment= std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(apvtsRef, "wahFeedback", feedbackSlider.getSlider());
 
     // Delay length: 5–50 samples
 //    delaySlider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
@@ -53,7 +53,7 @@ delaySlider("Delay", apvtsRef,juce::String(5))
 //    delaySlider.setRange(5, 50, 1);
 //    delaySlider.setTextValueSuffix(" smp");
     addAndMakeVisible(delaySlider);
-    delayAttachment.reset (new Attachment (apvtsRef, "wahDelay", delaySlider.getSlider()));
+    delayAttachment= std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(apvtsRef, "wahDelay", delaySlider.getSlider());
 }
 
 //void WahComponent::resized() {
@@ -102,7 +102,7 @@ void WahComponent::updateSliderVisibility()
     freqSlider.setVisible(!useSync);
     syncRateBox.setVisible(useSync);
     // Ensure labels/textboxes also hide along with the parent control
-    freqSlider.getLookAndFeel().setColour(juce::Slider::thumbColourId, juce::Colours::transparentBlack);
+//    freqSlider.getLookAndFeel().setColour(juce::Slider::thumbColourId, juce::Colours::transparentBlack);
     syncRateBox.setEnabled(useSync);
     repaint();
 }

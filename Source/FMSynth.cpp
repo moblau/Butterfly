@@ -12,7 +12,7 @@ void FMSynth::updateSynthParameters()
 {
     for (int j = 0; j < getNumVoices(); ++j)
     {
-        if (auto* voice = dynamic_cast<FMVoice*>(getVoice(j)))
+        if (auto* voice = dynamic_cast<FMVoice*>(getVoice(j))) //static cast
         {
             juce::ADSR::Parameters envParams;
             envParams.attack  = *apvts.getRawParameterValue("attack" + idSuffix[0]) / 1000.0f;

@@ -49,6 +49,7 @@ public:
     }
     ~SliderWithLabel() override
     {
+        slider.removeMouseListener(this);
         slider.setLookAndFeel(nullptr); // IMPORTANT: prevent dangling pointer
     }
     juce::Slider& getSlider() { return slider; }
@@ -273,6 +274,7 @@ public:
 
     ~WaveformVisualizer() override
     {
+        stopTimer();
         for (auto& id : listenedIDs)
             apvts.removeParameterListener(id, this);
     }

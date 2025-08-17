@@ -1,24 +1,31 @@
 #include "FXChainComponent.h"
 
 FXChainComponent::FXChainComponent(juce::AudioProcessorValueTreeState& apvtsRef) : apvts(apvtsRef)
+, wahComponent(apvtsRef)
+, filterComponent(apvtsRef)
 {
-    auto wahUI = std::make_unique<WahComponent>(apvtsRef);
-//    auto resUI = std::make_unique<ResonatorComponent>(apvtsRef);
-    auto filterUI = std::make_unique<FilterComponent>(apvtsRef);
-    addAndMakeVisible(*wahUI);
-//    addAndMakeVisible(*resUI);
-    addAndMakeVisible(*filterUI);
-    fxUIBlocks.push_back(std::move(wahUI));
-//    fxUIBlocks.push_back(std::move(resUI));
-    fxUIBlocks.push_back(std::move(filterUI));
+//    auto wahUI = std::make_unique<WahComponent>(apvtsRef);
+////    auto resUI = std::make_unique<ResonatorComponent>(apvtsRef);
+//    auto filterUI = std::make_unique<FilterComponent>(apvtsRef);
+//    addAndMakeVisible(*wahUI);
+////    addAndMakeVisible(*resUI);
+//    addAndMakeVisible(*filterUI);
+//    fxUIBlocks.push_back(std::move(wahUI));
+////    fxUIBlocks.push_back(std::move(resUI));
+//    fxUIBlocks.push_back(std::move(filterUI));
+    
+    addAndMakeVisible(wahComponent);
+    addAndMakeVisible(filterComponent);
 }
 
 void FXChainComponent::resized()
 {
     auto area = getLocalBounds();
     area.removeFromTop(32);
-    for (auto& fx : fxUIBlocks)
-        fx->setBounds(area.removeFromTop(185).reduced(5));
+//    for (auto& fx : fxUIBlocks)
+//        fx->setBounds(area.removeFromTop(185).reduced(5));
+    wahComponent.setBounds(area.removeFromTop(185).reduced(5));
+    filterComponent.setBounds(area.removeFromTop(185).reduced(5));
 }
 
 void FXChainComponent::paint (juce::Graphics& g )
