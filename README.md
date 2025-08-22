@@ -1,2 +1,2 @@
 # Butterfly
- An FM synth with a sequencer, formant filter, and overdrive
+ An FM synth with a voice intermodulation matrix, sequencer, vocal filter and moog filter.
