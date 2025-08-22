@@ -129,7 +129,7 @@ void ButterflyAudioProcessorEditor::timerCallback()
             voiceTab2.sequencer.updateFromHostPosition(info.ppqPosition, info.bpm);
             voiceTab3.sequencer.updateFromHostPosition(info.ppqPosition, info.bpm);
             voiceTab4.sequencer.updateFromHostPosition(info.ppqPosition, info.bpm);
-
+            modTab.modSequencer.updateFromHostPosition(info.ppqPosition, info.bpm);
             // Optional: Only repaint the visible one if expensive
             if (auto* current = dynamic_cast<VoiceTabComponent*>(tabs.getCurrentContentComponent()))
             {

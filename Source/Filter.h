@@ -58,4 +58,5 @@ private:
         return a - (a * a * a) / 3.0f;
     }
     juce::SmoothedValue<double, juce::ValueSmoothingTypes::Linear> cutoffSmoothed;
+    float lastFc;
 };

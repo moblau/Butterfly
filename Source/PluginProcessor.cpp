@@ -147,12 +147,15 @@ bool ButterflyAudioProcessor::isBusesLayoutSupported (const BusesLayout& layouts
 
 
 // Map matrix param (0..100) --> 0..1
-inline float amt01(const juce::AudioProcessorValueTreeState& apvts, int r, int c)
+inline float amt01 (const juce::AudioProcessorValueTreeState& apvts, int r, int c)
 {
-    auto* p = apvts.getRawParameterValue("mod_" + std::to_string(r+1) + "_" + std::to_string(c+1));
-    return p ? juce::jlimit<float>(0.0f, 100.0f, *p) / 100.0f : 0.0f;
-}
+    jassert (r >= 0 && r < 4 && c >= 0 && c < 4); // safety
 
+    if (auto* p = apvts.getRawParameterValue (PID::MODMATRIX[r][c]))
+        return juce::jlimit<float> (0.0f, 100.0f, *p) / 100.0f;
+
+    return 0.0f;
+}
 struct VoiceInfo {
     FMVoice* v = nullptr;
     bool   active = false;
@@ -270,15 +273,20 @@ juce::AudioProcessorEditor* ButterflyAudioProcessor::createEditor()
 //==============================================================================
 void ButterflyAudioProcessor::getStateInformation (juce::MemoryBlock& destData)
 {
-    // You should use this method to store your parameters in the memory block.
-    // You could do that either as raw data, or use the XML or ValueTree classes
-    // as intermediaries to make it easy to save and load complex data.
+    // This will serialize all parameters and any ValueTree state into the memory block
+    juce::MemoryOutputStream stream(destData, true);
+    apvts.state.writeToStream(stream);
 }
 
 void ButterflyAudioProcessor::setStateInformation (const void* data, int sizeInBytes)
 {
-    // You should use this method to restore your parameters from this memory block,
-    // whose contents will have been created by the getStateInformation() call.
+    // Restore parameters from the serialized data
+    auto tree = juce::ValueTree::readFromData(data, sizeInBytes);
+
+    if (tree.isValid())
+    {
+        apvts.state = tree;
+    }
 }
 
 //==============================================================================
@@ -338,11 +346,11 @@ juce::AudioProcessorValueTreeState::ParameterLayout ButterflyAudioProcessor::cre
         
 
         parameters.push_back(std::make_unique<juce::AudioParameterChoice>(
-            juce::ParameterID("MOD_WAVEFORM" + std::to_string(i), 1), "Mod Waveform " + std::to_string(i),
+            juce::ParameterID("MOD_WAVEFORM" + std::to_string(i), 1), "MOD_WAVEFORM" + std::to_string(i),
             juce::StringArray{ "Sine", "Saw", "Square" }, 0));
 
         parameters.push_back(std::make_unique<juce::AudioParameterChoice>(
-            juce::ParameterID("WAVEFORM" + std::to_string(i), 1), "Waveform " + std::to_string(i),
+            juce::ParameterID("WAVEFORM" + std::to_string(i), 1), "WAVEFORM" + std::to_string(i),
             juce::StringArray{ "Sine", "Saw", "Square" }, 0));
         
         
@@ -414,13 +422,29 @@ juce::AudioProcessorValueTreeState::ParameterLayout ButterflyAudioProcessor::cre
     }
     
     parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID("wahFreq", 1), "wahFreq", 1.0f, 50.0f, 10.0f));
+        juce::ParameterID("wahFreq", 1), "wahFreq", 1.0f, 10.0f, 10.0f));
     
     parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID("wahFeedback", 1), "wahFeedback", 0.0f, 1.0f, 0.0f));
     
     parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID("wahDelay", 1), "wahDelay", 5.0f, 100.0f, 20.0f));
+    
+    
+    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID("Frequency5modulate", 1),
+        "Frequency5modulate",
+        0.0f, 1.0f, 0.0f));
+    
+    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID("Feedback5modulate", 1),
+        "Feedback5modulate",
+        0.0f, 1.0f, 0.0f));
+    
+    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID("Delay5modulate", 1),
+        "Delay5modulate",
+        0.0f, 1.0f, 0.0f));
     
     
     parameters.push_back(std::make_unique<juce::AudioParameterBool>(
@@ -455,7 +479,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout ButterflyAudioProcessor::cre
         parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
             juce::ParameterID("res_feedback" + juce::String(i), 1),
             "res_feedback" + juce::String(i),
-            0.0f, 1.0f, 0.0f));
+            0.0f, .95f, 0.0f));
 
         parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
             juce::ParameterID("res_offset" + juce::String(i), 1),
@@ -533,6 +557,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout ButterflyAudioProcessor::cre
     parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID("res_filterfreq", 1), "res_filterfreq", 20.0f,22000.0f, 22000.0f));
     
+    
     parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID("filter_freq", 1),
         "filter_freq",
@@ -554,6 +579,29 @@ juce::AudioProcessorValueTreeState::ParameterLayout ButterflyAudioProcessor::cre
         juce::ParameterID("filter_drive", 1),
         "filter_drive",
         0,1,0));
+    
+    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID("Frequency6modulate", 1),
+        "Frequency6modulate",
+        0.0f, 1.0f, 0.0f));
+    
+    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID("Resonance6modulate", 1),
+        "Feedback6modulate",
+        0.0f, 1.0f, 0.0f));
+    
+    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID("Drive6modulate", 1),
+        "Drive6modulate",
+        0.0f, 1.0f, 0.0f));
+    
+    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID("Envelope6modulate", 1),
+        "Env6modulate",
+        0.0f, 1.0f, 0.0f));
+    
+    
+    
     juce::NormalisableRange<float> envRange { 0.0f, 5000.0f, 1.0f };
     envRange.setSkewForCentre(500.0f); // midpoint skew
 

@@ -1,6 +1,8 @@
 #include "VoiceEditor.h"
 
+
 VoiceEditor::VoiceEditor(juce::AudioProcessorValueTreeState& apvts, const juce::String& voicePrefix) :
+apvts(apvts),
 carrierWaveform(apvts,juce::String("WAVEFORM"), voicePrefix),
 modWaveform(apvts,juce::String("MOD_WAVEFORM"), voicePrefix),
 panSlider("Pan", apvts, voicePrefix),
@@ -70,8 +72,48 @@ resonatorOffsetStrengthSlider("Offset Strength", apvts, voicePrefix)
     oscPreview = std::make_unique<WaveformVisualizer>(apvts, voicePrefix);
         addAndMakeVisible(*oscPreview);
     
+    int v = voicePrefix.getIntValue()-1;
+    voiceIndex = v;
+    int all[4] = {0,1,2,3};
+    int t[3]; int ti = 0;
+    for (int i = 0; i < 4; ++i) if (all[i] != v) t[ti++] = all[i];
+
+    targetA = t[0];
+    targetB = t[1];
+    targetC = t[2];
+
+    // Labels: “Copy → 2/3/4” etc. (display 1-based)
+    copyBtnA.setButtonText(juce::String(targetA + 1));
+    copyBtnB.setButtonText(juce::String(targetB + 1));
+    copyBtnC.setButtonText(juce::String(targetC + 1));
+
+    addAndMakeVisible(copyBtnA);
+    addAndMakeVisible(copyBtnB);
+    addAndMakeVisible(copyBtnC);
+
+    copyBtnA.addListener(this);
+    copyBtnB.addListener(this);
+    copyBtnC.addListener(this);
+    
+    
+    addAndMakeVisible(copyLabel);
+    copyLabel.setText("Copy to", juce::NotificationType::dontSendNotification);
 }
 
+
+
+VoiceEditor::~VoiceEditor(){
+    copyBtnA.removeListener(this);
+    copyBtnB.removeListener(this);
+    copyBtnC.removeListener(this);
+}
+
+void VoiceEditor::buttonClicked(juce::Button* b)
+{
+    if (b == &copyBtnA) { copyVoiceParams(apvts, voiceIndex, targetA); return; }
+    if (b == &copyBtnB) { copyVoiceParams(apvts, voiceIndex, targetB); return; }
+    if (b == &copyBtnC) { copyVoiceParams(apvts, voiceIndex, targetC); return; }
+}
 
 void VoiceEditor::setupSlider(juce::Slider& slider, juce::Label& label, const juce::String& labelText)
 {
@@ -162,15 +204,24 @@ void VoiceEditor::resized()
     auto topRight = area.removeFromTop(area.getHeight()/2);
     freqSlider.setBounds(topRight.removeFromLeft(topRight.getWidth()/2).reduced(10));
     resSlider.setBounds(topRight.reduced(10));
+    auto copyArea = area.removeFromBottom(50);
     auto w = area.getWidth()/3;
-    resonatorOffsetSlider.setBounds(area.removeFromLeft(w).withHeight(140)
-        .withY(area.getY() + (area.getHeight() - (140)) / 2));
+    resonatorOffsetSlider.setBounds(area.removeFromLeft(w).withHeight(120)
+        .withY(area.getY() + (area.getHeight() - (120)) / 2));
 
-    resonatorFeedbackSlider.setBounds(area.removeFromLeft(w).withHeight((140))
-        .withY(area.getY() + (area.getHeight() - (140)) / 2));
+    resonatorFeedbackSlider.setBounds(area.removeFromLeft(w).withHeight((120))
+        .withY(area.getY() + (area.getHeight() - (120)) / 2));
 
-    resonatorOffsetStrengthSlider.setBounds(area.withHeight((140))
-        .withY(area.getY() + (area.getHeight() - (140)) / 2));
+    resonatorOffsetStrengthSlider.setBounds(area.withHeight((120))
+        .withY(area.getY() + (area.getHeight() - (120)) / 2));
+    int h = 30;   // desired button height
+    int btnW = 25;
+    int btnH = 25;
+    w = copyArea.getWidth()/4;
+    copyLabel.setBounds(copyArea.removeFromLeft(w).withSizeKeepingCentre(50, 25));
+    copyBtnA.setBounds(copyArea.removeFromLeft(w).withSizeKeepingCentre(btnW, btnH));
+    copyBtnB.setBounds(copyArea.removeFromLeft(w).withSizeKeepingCentre(btnW, btnH));
+    copyBtnC.setBounds(copyArea.withSizeKeepingCentre(btnW, btnH));
     
 //    placeLabelAboveSlider(panSliderLabel, panSlider,10,0);
 //    placeLabelAboveSlider(detuneSliderLabel, detuneSlider,10,0);
@@ -225,4 +276,60 @@ void VoiceEditor::paint(juce::Graphics& g)
 
     // Horizontal center line
     g.drawLine(area.getX(), midY, area.getRight(), midY, 1.0f);
+    
+    const int w = area.getWidth() / 2;
+    const int h = 50;
+
+    juce::Rectangle<int> br(
+        area.getRight() - w,
+        area.getBottom() - h,
+        w, h
+    );
+
+    g.setColour (juce::Colours::lightgrey);
+
+    // draw only the top line of this rectangle
+    g.drawLine (
+        (float) br.getX(),           // left x
+        (float) br.getY(),           // y (top)
+        (float) br.getRight(),       // right x
+        (float) br.getY(),           // same y
+                1.0f);
+}
+
+void VoiceEditor::copyVoiceParams(juce::AudioProcessorValueTreeState& apvts, int srcVoice, int dstVoice)
+{
+    // --- oscillator / FM params ---
+    using namespace PID;
+    
+    apvts.getParameter(PAN[dstVoice])->setValueNotifyingHost(apvts.getParameter(PAN[srcVoice])->getValue());
+    apvts.getParameter(DETUNE[dstVoice])->setValueNotifyingHost(apvts.getParameter(DETUNE[srcVoice])->getValue());
+    apvts.getParameter(DOWNSAMPLE[dstVoice])->setValueNotifyingHost(apvts.getParameter(DOWNSAMPLE[srcVoice])->getValue());
+    apvts.getParameter(MOD_INDEX[dstVoice])->setValueNotifyingHost(apvts.getParameter(MOD_INDEX[srcVoice])->getValue());
+    apvts.getParameter(MOD_WAVE[dstVoice])->setValueNotifyingHost(apvts.getParameter(MOD_WAVE[srcVoice])->getValue());
+    apvts.getParameter(CARR_WAVE[dstVoice])->setValueNotifyingHost(apvts.getParameter(CARR_WAVE[srcVoice])->getValue());
+
+    apvts.getParameter(MOD_RATIO_NUM[dstVoice])->setValueNotifyingHost(apvts.getParameter(MOD_RATIO_NUM[srcVoice])->getValue());
+    apvts.getParameter(MOD_RATIO_DEN[dstVoice])->setValueNotifyingHost(apvts.getParameter(MOD_RATIO_DEN[srcVoice])->getValue());
+
+    // --- filter / resonator ---
+    apvts.getParameter(filter_freqN[dstVoice])->setValueNotifyingHost(apvts.getParameter(filter_freqN[srcVoice])->getValue());
+    apvts.getParameter(filter_resN[dstVoice])->setValueNotifyingHost(apvts.getParameter(filter_resN[srcVoice])->getValue());
+    apvts.getParameter(res_offset[dstVoice])->setValueNotifyingHost(apvts.getParameter(res_offset[srcVoice])->getValue());
+    apvts.getParameter(res_feedback[dstVoice])->setValueNotifyingHost(apvts.getParameter(res_feedback[srcVoice])->getValue());
+    apvts.getParameter(offset_strength[dstVoice])->setValueNotifyingHost(apvts.getParameter(offset_strength[srcVoice])->getValue());
+
+    // --- alias toggle ---
+    apvts.getParameter(PID::aliasToggle[dstVoice])->setValueNotifyingHost(apvts.getParameter(PID::aliasToggle[srcVoice])->getValue());
+    
+    apvts.getParameter(PID::waveform[dstVoice])->setValueNotifyingHost(apvts.getParameter(PID::waveform[srcVoice])->getValue());
+    
+    apvts.getParameter(PID::mod_waveform[dstVoice])->setValueNotifyingHost(apvts.getParameter(PID::mod_waveform[srcVoice])->getValue());
+
+    // --- sequencer steps (if you want to copy these too) ---
+    for (int step = 0; step < 8; ++step)
+    {
+        apvts.getParameter(seqStep[dstVoice][step])->setValueNotifyingHost(apvts.getParameter(seqStep[srcVoice][step])->getValue());
+        apvts.getParameter(seqOffset[dstVoice][step])->setValueNotifyingHost(apvts.getParameter(seqOffset[srcVoice][step])->getValue());
+    }
 }

@@ -74,7 +74,7 @@ StepSequencer::StepSequencer(int numSteps_, int stepSeqIndex,
 
 
     addAndMakeVisible(rateSelector);
-    
+    leftWidth = 70;
 //    modNumeratorButton.setButtonText("Numerator");
 //    modDenominatorButton.setButtonText("Denominator");
 //    modAmountButton.setButtonText("Mod Gain");
@@ -116,10 +116,11 @@ void StepSequencer::resized()
 
     auto area = getLocalBounds();
     auto bottomArea = area.removeFromBottom(15);
-    auto modulationArea = area.removeFromTop(40);
+//    auto modulationArea = area.removeFromTop(40);
     auto offsetArea = area.removeFromTop(30);
-
-    stepCountSlider.setBounds(bottomArea);
+    int leftSize = leftWidth;
+    auto leftArea = area.removeFromLeft(leftSize);
+    stepCountSlider.setBounds(bottomArea.removeFromRight(bottomArea.getWidth()-leftWidth+6));
 
     int stepWidth = area.getWidth() / numSteps;
 
@@ -128,7 +129,7 @@ void StepSequencer::resized()
     {
         if (i < stepCount)
         {
-            stepSliders[i]->setBounds(i * stepWidth, area.getY(), stepWidth, area.getHeight());
+            stepSliders[i]->setBounds(leftSize+i * stepWidth, area.getY(), stepWidth, area.getHeight());
             stepSliders[i]->setVisible(true);
         }
         else
@@ -136,12 +137,12 @@ void StepSequencer::resized()
             stepSliders[i]->setVisible(false);
         }
 
-        offsetKnobs[i]->setBounds(i * stepWidth, offsetArea.getY(), stepWidth, offsetArea.getHeight());
+        offsetKnobs[i]->setBounds(leftSize+i * stepWidth, offsetArea.getY(), stepWidth, offsetArea.getHeight());
         // Optional: also hide offset knobs beyond stepCount
         offsetKnobs[i]->setVisible(i < stepCount);
     }
 
-    rateSelector.setBounds(10, 10, 80, 24);
+    rateSelector.setBounds(leftArea.withHeight(30));
 //    modNumeratorButton.setBounds(150, 10, 120, 24);
 //    modDenominatorButton.setBounds(290, 10, 140, 24);
 //    modAmountButton.setBounds(440, 10, 120, 24);
@@ -165,25 +166,26 @@ void StepSequencer::paint(juce::Graphics& g)
 
     // Apply the gradient
     g.setGradientFill(gradient);
-    g.fillAll();
+//    g.fillAll();
 
     if (currentStep >= 0 && currentStep < stepSliders.size())
     {
         auto area = getLocalBounds();
         auto stepArea = area;
-        stepArea.removeFromTop(30); // exclude modulation list box
-
-        int stepWidth = stepArea.getWidth() / numSteps;
+//        stepArea.removeFromTop(30); // exclude modulation list box
+        area.removeFromLeft(leftWidth);
+        g.fillRect(area);
+        int stepWidth = area.getWidth() / (numSteps);
 
         // Highlight the current step with a fill
         g.setColour(juce::Colour::fromRGBA(0, 32, 16, 127));
-        g.fillRect(currentStep * stepWidth, stepArea.getY(), stepWidth, stepArea.getHeight());
+        g.fillRect(leftWidth+currentStep * stepWidth, stepArea.getY(), stepWidth, stepArea.getHeight());
         g.setColour(juce::Colour::fromRGB(26,86,91));
-        g.drawRect(currentStep * stepWidth, stepArea.getY(), stepWidth, stepArea.getHeight(), 1); // thickness = 2
+        g.drawRect(leftWidth+currentStep * stepWidth, stepArea.getY(), stepWidth, stepArea.getHeight(), 1); // thickness = 2
         
         // Draw border around active steps from 0 to currentStep (inclusive)
         g.setColour(juce::Colour::fromRGB(26,86,91));
-        g.drawRect(0, stepArea.getY(), (stepCount ) * stepWidth, stepArea.getHeight()-15, 1); // thickness = 2
+        g.drawRect(leftWidth, stepArea.getY(), (stepCount ) * stepWidth, stepArea.getHeight()-15, 1); // thickness = 2
     }
 }
 

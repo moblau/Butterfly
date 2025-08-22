@@ -1,10 +1,10 @@
 #include "FilterComponent.h"
 
 FilterComponent::FilterComponent(juce::AudioProcessorValueTreeState& apvtsRef)
-: FXUnit(apvtsRef), freqSlider("Frequency", apvtsRef, juce::String(5)),
-resSlider("Resonance", apvtsRef, juce::String(5)),
-envSlider("Envelope", apvtsRef, juce::String(5)),
-driveSlider("Drive", apvtsRef, juce::String(5))
+: FXUnit(apvtsRef), freqSlider("Frequency", apvtsRef, juce::String(6)),
+resSlider("Resonance", apvtsRef, juce::String(6)),
+envSlider("Envelope", apvtsRef, juce::String(6)),
+driveSlider("Drive", apvtsRef, juce::String(6))
 {
     setSize(200, 200);
 

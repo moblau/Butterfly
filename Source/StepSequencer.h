@@ -50,5 +50,6 @@ private:
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> stepCountSliderAttachment;
     
     StepSequencerLookAndFeel lnf;
+    int leftWidth;
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(StepSequencer)
 };

@@ -2,7 +2,7 @@
 
 #include "ResonatorProcessor.h"
 
-ResonatorProcessor::ResonatorProcessor(juce::AudioProcessorValueTreeState& apvtsRef,juce::AudioPlayHead* playHead, int res_index) : DSPModule(apvtsRef,playHead), res_index(juce::String(res_index)) {}
+ResonatorProcessor::ResonatorProcessor(juce::AudioProcessorValueTreeState& apvtsRef,juce::AudioPlayHead* playHead, int res_index) : DSPModule(apvtsRef,playHead), res_index(res_index-1) {}
 ResonatorProcessor::~ResonatorProcessor() = default;
 
 void ResonatorProcessor::prepare(double sampleRate, int samplesPerBlock)
@@ -31,18 +31,35 @@ void ResonatorProcessor::process(juce::AudioBuffer<float>& buffer)
 {
     const int totalNumSamples  = buffer.getNumSamples();
     const int totalNumChannels = buffer.getNumChannels();
-
-    float offsetNorm = *apvts.getRawParameterValue("res_offset" + res_index);
-    float feedbackAmount      = *apvts.getRawParameterValue("res_feedback" + res_index);
-    float offsetStrength      = *apvts.getRawParameterValue("res_offset_strength" + res_index);
-
     
-    bool modResOffsetActive = *apvts.getRawParameterValue("Resonator Offset" + juce::String(res_index) + "modulate");
-    bool modResFeedbackActive = *apvts.getRawParameterValue("Resonator Feedback" + juce::String(res_index) + "modulate");
-    bool modResOffsetStrengthActive = *apvts.getRawParameterValue("Offset Strength" + juce::String(res_index) + "modulate");
+    float offsetNorm        = *apvts.getRawParameterValue(PID::res_offset[res_index]);
+    float feedbackAmount    = *apvts.getRawParameterValue(PID::res_feedback[res_index]);
+    float offsetStrength    = *apvts.getRawParameterValue(PID::offset_strength[res_index]); // <-- if you have a separate array for strength, replace here
+//
+    bool modResOffsetActive       = *apvts.getRawParameterValue(PID::RESOFF_mod[res_index]);
+    bool modResFeedbackActive     = *apvts.getRawParameterValue(PID::RESFDB_mod[res_index]);
+    bool modResOffsetStrengthActive = *apvts.getRawParameterValue(PID::OFFSTR_mod[res_index]); // same note: add an `OFFSET_STRENGTH_mod` array if needed
+
+//    float offsetNorm        = 0;
+//    float feedbackAmount    = 0;
+// 
+//    bool modResOffsetActive       = 0;
+//    bool modResFeedbackActive     = 0;
+//    bool modResOffsetStrengthActive = 0;
     
-    int currentStep = static_cast<int>(*apvts.getRawParameterValue("seq" + juce::String(res_index) + "CURRENT_STEP"));
-    float stepValue = *apvts.getRawParameterValue("seq" + juce::String(res_index) + "step" + juce::String(currentStep));
+    int currentStep = static_cast<int>(*apvts.getRawParameterValue(PID::seqCurrentStep[res_index]));
+    float stepValue = *apvts.getRawParameterValue(PID::seqStep[res_index][currentStep]);
+//    float offsetNorm = *apvts.getRawParameterValue("res_offset" + res_index);
+//    float feedbackAmount      = *apvts.getRawParameterValue("res_feedback" + res_index);
+//    float offsetStrength      = *apvts.getRawParameterValue("res_offset_strength" + res_index);
+//
+//    
+//    bool modResOffsetActive = *apvts.getRawParameterValue("Resonator Offset" + juce::String(res_index) + "modulate");
+//    bool modResFeedbackActive = *apvts.getRawParameterValue("Resonator Feedback" + juce::String(res_index) + "modulate");
+//    bool modResOffsetStrengthActive = *apvts.getRawParameterValue("Offset Strength" + juce::String(res_index) + "modulate");
+//    
+//    int currentStep = static_cast<int>(*apvts.getRawParameterValue("seq" + juce::String(res_index) + "CURRENT_STEP"));
+//    float stepValue = *apvts.getRawParameterValue("seq" + juce::String(res_index) + "step" + juce::String(currentStep));
     
 //    float resOffsetSeq = 0;
     if ( modResOffsetStrengthActive ){

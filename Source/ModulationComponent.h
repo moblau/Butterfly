@@ -91,13 +91,14 @@ class ModulationComponent : public juce::Component
 public:
     ModulationComponent(juce::AudioProcessorValueTreeState& apvtsRef);
     void resized() override;
+    StepSequencer modSequencer;
     private:
     EnvelopeComponent amplitudeEnvelope;
     EnvelopeComponent filterEnvelope;
     juce::TabbedComponent tabComponent { juce::TabbedButtonBar::TabsAtTop };
     juce::AudioProcessorValueTreeState& apvts;
     
-    StepSequencer modSequencer;
+    
     ModMatrixComponent modMatrix;
 };
 

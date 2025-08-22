@@ -31,11 +31,24 @@ void WahProcessor::setParameters(float lfoFreq, float startPhase, float feedback
 }
 void WahProcessor::process(juce::AudioBuffer<float>& buffer)
 {
+    auto pfloat = [this](const juce::String& id) -> float
+    {
+        if (auto* p = apvts.getRawParameterValue(id)) return *p;
+        jassertfalse; return 0.0f;
+    };
+    
     // 1) Read “free‐running” parameters:
     float freeFreq   = *apvts.getRawParameterValue("wahFreq");     // in Hz
     float feedback   = *apvts.getRawParameterValue("wahFeedback"); // 0…1
     float delay      = *apvts.getRawParameterValue("wahDelay");    // in samples (or however you store it)
+    
+    const bool freqModOn   = *apvts.getRawParameterValue("Frequency5modulate");
+    const bool feedbackModOn   = *apvts.getRawParameterValue("Feedback5modulate");
+    const bool delayModOn   = *apvts.getRawParameterValue("Delay5modulate");
 
+    const int currentStep = (int) pfloat(PID::seqCurrentStep[4]);
+    const float stepValue = pfloat(PID::seqStep[4][juce::jlimit(0, 7, currentStep)]);
+    
     // 2) Read the new “sync” parameters:
     bool  useSync    = static_cast<bool>(*apvts.getRawParameterValue("WahUseSync"));
     int   syncIndex  = static_cast<int>(*apvts.getRawParameterValue("WahSyncRate")); // 1=“1/4”, 2=“1/8”, etc.
@@ -86,10 +99,24 @@ void WahProcessor::process(juce::AudioBuffer<float>& buffer)
         
         
     }
-
+    else
+    {
+        if (freqModOn){
+            lfoFreqToUse = juce::jlimit<float>(1.0,10.0,freeFreq+stepValue*50.0);
+        }
+        
+    }
     // 4) Convert “delay” to an integer number of samples (clamp if needed):
-    int delaySamples = juce::jlimit(1,  100,  static_cast<int>(delay));
-
+    int delaySamples = juce::jlimit(5,  100,  static_cast<int>(delay));
+    
+    if( delayModOn){
+        delaySamples = juce::jlimit(5,  100,  static_cast<int>(delay+stepValue*100.0));
+    }
+    
+    if (feedbackModOn)
+    {
+        feedback = juce::jlimit<float>(0,1.0,feedback+stepValue);
+    }
     // 5) Update our internal LFO frequency, feedback, and delay‐length:
     setParameters(lfoFreqToUse, 0.0f, feedback, delaySamples);
 

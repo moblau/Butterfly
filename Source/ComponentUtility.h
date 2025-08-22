@@ -139,70 +139,96 @@ private:
     juce::String prefix;
 };
 
-class WaveformSelector : public juce::Component, private juce::AudioProcessorValueTreeState::Listener
+class WaveformSelector : public juce::Component,
+                         private juce::AudioProcessorValueTreeState::Listener
 {
 public:
-    
-    WaveformSelector(juce::AudioProcessorValueTreeState& apvts, juce::String waveformType, juce::String waveformIndex)
+    WaveformSelector(juce::AudioProcessorValueTreeState& apvts,
+                     juce::String waveformType,
+                     juce::String waveformIndex)
+        : apvtsRef(apvts)
     {
-        // Sine button
-        sineOn = juce::ImageFileFormat::loadFrom(BinaryData::SineOn_png, BinaryData::SineOn_pngSize);
-        sineOff = juce::ImageFileFormat::loadFrom(BinaryData::SineOff_png, BinaryData::SineOff_pngSize);
+        // Images + buttons (unchanged)
+        sineOn  = juce::ImageFileFormat::loadFrom(BinaryData::SineOn_png,   BinaryData::SineOn_pngSize);
+        sineOff = juce::ImageFileFormat::loadFrom(BinaryData::SineOff_png,  BinaryData::SineOff_pngSize);
         sineButton.setImages(false, true, true, sineOff, 1.0f, {}, sineOn, 1.0f, {}, sineOn, 1.0f, {});
         addAndMakeVisible(sineButton);
-        sineButton.onClick = [this]() { selectButton(&sineButton); };
+        sineButton.onClick = [this]() { userSelect(0); };
 
-        // Saw button
-        sawOn = juce::ImageFileFormat::loadFrom(BinaryData::SawOn_png, BinaryData::SawOn_pngSize);
-        sawOff = juce::ImageFileFormat::loadFrom(BinaryData::SawOff_png, BinaryData::SawOff_pngSize);
+        sawOn   = juce::ImageFileFormat::loadFrom(BinaryData::SawOn_png,    BinaryData::SawOn_pngSize);
+        sawOff  = juce::ImageFileFormat::loadFrom(BinaryData::SawOff_png,   BinaryData::SawOff_pngSize);
         sawButton.setImages(false, true, true, sawOff, 1.0f, {}, sawOn, 1.0f, {}, sawOn, 1.0f, {});
         addAndMakeVisible(sawButton);
-        sawButton.onClick = [this]() { selectButton(&sawButton); };
+        sawButton.onClick = [this]() { userSelect(1); };
 
-        // Square button
-        squareOn = juce::ImageFileFormat::loadFrom(BinaryData::SquareOn_png, BinaryData::SquareOn_pngSize);
+        squareOn  = juce::ImageFileFormat::loadFrom(BinaryData::SquareOn_png,  BinaryData::SquareOn_pngSize);
         squareOff = juce::ImageFileFormat::loadFrom(BinaryData::SquareOff_png, BinaryData::SquareOff_pngSize);
         squareButton.setImages(false, true, true, squareOff, 1.0f, {}, squareOn, 1.0f, {}, squareOn, 1.0f, {});
         addAndMakeVisible(squareButton);
-        squareButton.onClick = [this]() { selectButton(&squareButton); };
-        
-        auto paramID = waveformType + waveformIndex;
+        squareButton.onClick = [this]() { userSelect(2); };
 
-        bindToParameter(apvts, paramID);
-
-        selectButton(&sineButton);
-
-    }
-
-    void bindToParameter(juce::AudioProcessorValueTreeState& apvts, const juce::String& paramID)
-    {
-        parameter = dynamic_cast<juce::AudioParameterChoice*>(apvts.getParameter(paramID));
+        // Bind to parameter
+        paramID = waveformType + waveformIndex;
+        parameter = dynamic_cast<juce::AudioParameterChoice*>(apvtsRef.getParameter(paramID));
         jassert(parameter != nullptr);
-        apvts.addParameterListener(paramID, this);
 
+        // Listen for changes from host/automation/preset load
+        apvtsRef.addParameterListener(paramID, this);
+
+        // Initialise UI from current parameter value
         setWaveformFromIndex(parameter->getIndex());
     }
 
+    ~WaveformSelector() override
+    {
+        if (parameter != nullptr)
+            apvtsRef.removeParameterListener(paramID, this);
+    }
 
     void resized() override
     {
         auto area = getLocalBounds().reduced(10);
         auto buttonWidth = area.getWidth() / 3;
-
-        sineButton.setBounds(area.removeFromLeft(buttonWidth));
-        sawButton.setBounds(area.removeFromLeft(buttonWidth));
+        sineButton .setBounds(area.removeFromLeft(buttonWidth));
+        sawButton  .setBounds(area.removeFromLeft(buttonWidth));
         squareButton.setBounds(area);
     }
 
-
 private:
-    juce::ImageButton sineButton, sawButton, squareButton;
-    juce::Image sineOn, sineOff, sawOn, sawOff, squareOn, squareOff;
-    juce::String currentSelection;
+    // --- Parameter listening ---
+    void parameterChanged(const juce::String& changedParamID, float newValue) override
+    {
+        if (changedParamID != paramID) return;
 
-    juce::AudioParameterChoice* parameter = nullptr;
+        // We're on the audio thread here -> bounce to message thread to touch UI
+        const int newIndex = static_cast<int>(newValue + 0.5f); // for choice params, newValue is the *index* (not normalized)
+        juce::MessageManager::callAsync([this, newIndex]
+        {
+            setWaveformFromIndex(newIndex); // UI only, no param write
+        });
+    }
 
-    void selectButton(juce::ImageButton* selected)
+    // Called when user clicks a button
+    void userSelect(int index)
+    {
+        if (parameter == nullptr) return;
+
+        // Update UI
+        setWaveformFromIndex(index);
+
+        // Write parameter using normalized value
+        parameter->beginChangeGesture();
+        parameter->setValueNotifyingHost(parameter->convertTo0to1(index));
+        parameter->endChangeGesture();
+    }
+
+    // --- UI helpers (no parameter writes here) ---
+    void setWaveformFromIndex(int index)
+    {
+        applySelectionUI(index == 0, index == 1, index == 2);
+    }
+
+    void applySelectionUI(bool sineOnSel, bool sawOnSel, bool squareOnSel)
     {
         auto set = [](juce::ImageButton& b, const juce::Image& on, const juce::Image& off, bool isOn)
         {
@@ -212,36 +238,128 @@ private:
                         isOn ? on : off, 1.0f, {});
         };
 
-        set(sineButton, sineOn, sineOff, selected == &sineButton);
-        set(sawButton, sawOn, sawOff, selected == &sawButton);
-        set(squareButton, squareOn, squareOff, selected == &squareButton);
-
-        if (parameter != nullptr)
-        {
-            parameter->beginChangeGesture();
-            if (selected == &sineButton)   parameter->setValueNotifyingHost(0.0f); // index 0
-            if (selected == &sawButton)    parameter->setValueNotifyingHost(.5f);
-            if (selected == &squareButton) parameter->setValueNotifyingHost(1.0f);
-            parameter->endChangeGesture();
-        }
+        set(sineButton,   sineOn,   sineOff,   sineOnSel);
+        set(sawButton,    sawOn,    sawOff,    sawOnSel);
+        set(squareButton, squareOn, squareOff, squareOnSel);
     }
 
-    void setWaveformFromIndex(int index)
-    {
-        if      (index == 0) selectButton(&sineButton);
-        else if (index == 1) selectButton(&sawButton);
-        else if (index == 2) selectButton(&squareButton);
-    }
-//
-    void parameterChanged(const juce::String&, float newValue) override
-    {
-        juce::MessageManager::callAsync([this, index = static_cast<int>(newValue)] {
-            setWaveformFromIndex(index);
-        });
-    }
+private:
+    juce::AudioProcessorValueTreeState& apvtsRef;
+    juce::String paramID;
+    juce::AudioParameterChoice* parameter = nullptr;
 
-        JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(WaveformSelector)
+    juce::ImageButton sineButton, sawButton, squareButton;
+    juce::Image sineOn, sineOff, sawOn, sawOff, squareOn, squareOff;
+
+    JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(WaveformSelector)
 };
+
+
+//
+//class WaveformSelector : public juce::Component, private juce::AudioProcessorValueTreeState::Listener
+//{
+//public:
+//    
+//    WaveformSelector(juce::AudioProcessorValueTreeState& apvts, juce::String waveformType, juce::String waveformIndex)
+//    {
+//        // Sine button
+//        sineOn = juce::ImageFileFormat::loadFrom(BinaryData::SineOn_png, BinaryData::SineOn_pngSize);
+//        sineOff = juce::ImageFileFormat::loadFrom(BinaryData::SineOff_png, BinaryData::SineOff_pngSize);
+//        sineButton.setImages(false, true, true, sineOff, 1.0f, {}, sineOn, 1.0f, {}, sineOn, 1.0f, {});
+//        addAndMakeVisible(sineButton);
+//        sineButton.onClick = [this]() { selectButton(&sineButton); };
+//
+//        // Saw button
+//        sawOn = juce::ImageFileFormat::loadFrom(BinaryData::SawOn_png, BinaryData::SawOn_pngSize);
+//        sawOff = juce::ImageFileFormat::loadFrom(BinaryData::SawOff_png, BinaryData::SawOff_pngSize);
+//        sawButton.setImages(false, true, true, sawOff, 1.0f, {}, sawOn, 1.0f, {}, sawOn, 1.0f, {});
+//        addAndMakeVisible(sawButton);
+//        sawButton.onClick = [this]() { selectButton(&sawButton); };
+//
+//        // Square button
+//        squareOn = juce::ImageFileFormat::loadFrom(BinaryData::SquareOn_png, BinaryData::SquareOn_pngSize);
+//        squareOff = juce::ImageFileFormat::loadFrom(BinaryData::SquareOff_png, BinaryData::SquareOff_pngSize);
+//        squareButton.setImages(false, true, true, squareOff, 1.0f, {}, squareOn, 1.0f, {}, squareOn, 1.0f, {});
+//        addAndMakeVisible(squareButton);
+//        squareButton.onClick = [this]() { selectButton(&squareButton); };
+//        
+//        auto paramID = waveformType + waveformIndex;
+//        parameter = dynamic_cast<juce::AudioParameterChoice*>(apvts.getParameter(paramID));
+////        bindToParameter(apvts, paramID);
+//
+//        selectButton(&sineButton);
+//        apvts.addParameterListener(paramID, this);
+//
+//    }
+//
+////    void bindToParameter(juce::AudioProcessorValueTreeState& apvts, const juce::String& paramID)
+////    {
+////        parameter = dynamic_cast<juce::AudioParameterChoice*>(apvts.getParameter(paramID));
+////        jassert(parameter != nullptr);
+////        apvts.addParameterListener(paramID, this);
+////
+////        setWaveformFromIndex(parameter->getIndex());
+////    }
+//
+//
+//    void resized() override
+//    {
+//        auto area = getLocalBounds().reduced(10);
+//        auto buttonWidth = area.getWidth() / 3;
+//
+//        sineButton.setBounds(area.removeFromLeft(buttonWidth));
+//        sawButton.setBounds(area.removeFromLeft(buttonWidth));
+//        squareButton.setBounds(area);
+//    }
+//
+//
+//private:
+//    juce::ImageButton sineButton, sawButton, squareButton;
+//    juce::Image sineOn, sineOff, sawOn, sawOff, squareOn, squareOff;
+//    juce::String currentSelection;
+//
+//    juce::AudioParameterChoice* parameter = nullptr;
+//
+//    void selectButton(juce::ImageButton* selected)
+//    {
+//        auto set = [](juce::ImageButton& b, const juce::Image& on, const juce::Image& off, bool isOn)
+//        {
+//            b.setImages(false, true, true,
+//                        isOn ? on : off, 1.0f, {},
+//                        isOn ? on : off, 1.0f, {},
+//                        isOn ? on : off, 1.0f, {});
+//        };
+//
+//        set(sineButton, sineOn, sineOff, selected == &sineButton);
+//        set(sawButton, sawOn, sawOff, selected == &sawButton);
+//        set(squareButton, squareOn, squareOff, selected == &squareButton);
+//
+//        if (parameter != nullptr)
+//        {
+//            parameter->beginChangeGesture();
+//            if (selected == &sineButton)   parameter->setValueNotifyingHost(0.0f); // index 0
+//            if (selected == &sawButton)    parameter->setValueNotifyingHost(.5f);
+//            if (selected == &squareButton) parameter->setValueNotifyingHost(1.0f);
+//            parameter->endChangeGesture();
+//        }
+//    }
+//
+//    void setWaveformFromIndex(int index)
+//    {
+//        if      (index == 0) selectButton(&sineButton);
+//        else if (index == 1) selectButton(&sawButton);
+//        else if (index == 2) selectButton(&squareButton);
+//    }
+////
+////    void parameterChanged(const juce::String&, float newValue) override
+////    {
+////        juce::MessageManager::callAsync([this, index = static_cast<int>(newValue)] {
+////            setWaveformFromIndex(index);
+////        });
+////    }
+//
+//        JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(WaveformSelector)
+//};
 
 // WaveformVisualizer.h/.cpp (or add near ComponentUtility if you prefer)
 #pragma once

@@ -18,7 +18,7 @@ public:
         auto area = getLocalBounds();
         auto voiceArea = area.removeFromTop(area.getHeight() * 0.65); // adjust ratio
         voiceEditor.setBounds(voiceArea);
-        sequencer.setBounds(area);
+        sequencer.setBounds(area.reduced(5));
     }
 
     VoiceEditor voiceEditor;

@@ -2,7 +2,7 @@
 #include <JuceHeader.h>
 #include <complex>
 #include "DSPModule.h"
-
+#include "ParamIDs.h"
 
 class ResonatorProcessor : public DSPModule
 {
@@ -22,7 +22,7 @@ private:
 //    std::array<int, 4> activeMidiNotes;
     int activeMidiNote;
     double sr;
-    juce::String res_index;
+    int res_index;
 //    std::array<juce::dsp::IIR::Filter<float>, 4> dampingFilters;
 //    float ratio;
 };

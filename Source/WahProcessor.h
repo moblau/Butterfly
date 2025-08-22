@@ -2,7 +2,7 @@
 #include <JuceHeader.h>
 #include <complex>
 #include "DSPModule.h"
-
+#include "ParamIDs.h"
 class WahProcessor : public DSPModule
 {
 public:
