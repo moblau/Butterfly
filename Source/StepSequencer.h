@@ -2,7 +2,8 @@
 
 #include <JuceHeader.h>
 #include "CustomLookAndFeel.h"
-
+#include "ParamIDs.h"
+#include "ComponentUtility.h"
 class StepSequencer : public juce::Component
 {
 public:
@@ -26,6 +27,9 @@ private:
 
     double stepLengthInBeats = 0.25; // 1/16th note by default
 
+    SliderWithLabel glideSlider;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> glideAttachment;
+    
     std::vector<std::unique_ptr<juce::Slider>> stepSliders;
     std::vector<std::unique_ptr<juce::Slider>> offsetKnobs;
     std::vector<std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>> sliderAttachments;

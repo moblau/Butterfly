@@ -2,7 +2,7 @@
 #include "FMVoice.h"  // if needed
 #include "ParamIDs.h"
 
-FMSynth::FMSynth(juce::AudioProcessorValueTreeState& apvts) : apvts(apvts){
+FMSynth::FMSynth(juce::AudioProcessorValueTreeState& apvts) : apvts(apvts), playhead(play){
     //use a look up table for ID's instead of creating string, better to keep the look up table
     //use a seperate file for ID's, make them static.
     for (int i = 0; i < idSuffix.size(); ++i)
@@ -61,8 +61,8 @@ void FMSynth::updateSynthParameters()
         const bool shouldAlias       = pfloat(PID::aliasToggle[i])    != 0.0f;
 
         // Common scalings
-        const float scaledStepRatio  = stepValue * 10.0f - 5.0f;   // for int-ish params (num/den)
-        const float scaledStepModAmt = stepValue * 100.0f - 50.0f; // for mod index
+        const float scaledStepRatio  = stepValue * 5 ;   // for int-ish params (num/den)
+        const float scaledStepModAmt = stepValue * 50; // for mod index
 
         // Pan
         float panSeq = modPanActive ? stepValue : 0.0f;
@@ -88,7 +88,8 @@ void FMSynth::updateSynthParameters()
             float modIndex  = baseIndex + (modAmountActive ? scaledStepModAmt : 0.0f);
             modIndex = juce::jlimit(0.0f, 50.0f, modIndex);
             voice->setModulationIndex(modIndex);
-        }
+
+         }
 
         // Waves
         voice->setModulatorWaveform((int) pfloat(PID::MOD_WAVE[i]));
@@ -111,6 +112,8 @@ void FMSynth::updateSynthParameters()
         voice->setGain(stepValue);
         voice->setAlias(shouldAlias);
 
+        float sma = *apvts.getRawParameterValue(PID::MODMATRIX[i][i]);
+        voice->setSelfModAmt(sma);
         // (If you want to use modResOffsetAct/modResFeedbackAct here, wire them to your voice params)
     }
 }

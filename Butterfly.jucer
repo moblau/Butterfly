@@ -5,6 +5,10 @@
               companyName="Zuluby" pluginCharacteristicsValue="pluginIsSynth,pluginWantsMidiIn">
   <MAINGROUP id="iFRJHZ" name="Butterfly">
     <GROUP id="{51942F9A-32FD-D5FE-0310-E53513AF045D}" name="Source">
+      <FILE id="B3dmwW" name="SequencerEngine.h" compile="0" resource="0"
+            file="Source/SequencerEngine.h"/>
+      <FILE id="UaGtvr" name="SequencerEngine.cpp" compile="1" resource="0"
+            file="Source/SequencerEngine.cpp"/>
       <GROUP id="{7844E39E-A048-5CD5-1883-BD93CB20F487}" name="assets">
         <FILE id="r4BcO1" name="SawOff.png" compile="0" resource="1" file="assets/SawOff.png"/>
         <FILE id="HLFtlD" name="SawOn.png" compile="0" resource="1" file="assets/SawOn.png"/>

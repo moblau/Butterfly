@@ -2,7 +2,7 @@
 
 StepSequencer::StepSequencer(int numSteps_, int stepSeqIndex,
                              juce::AudioProcessorValueTreeState& vts)
-    : numSteps(numSteps_), parameters(vts)
+: numSteps(numSteps_), parameters(vts), glideSlider("Glide", vts, juce::String(stepSeqIndex))
 {
     
     // Set up the modulation list box with options.
@@ -108,6 +108,9 @@ StepSequencer::StepSequencer(int numSteps_, int stepSeqIndex,
     rateSelectorAttachment = std::make_unique<juce::AudioProcessorValueTreeState::ComboBoxAttachment>(
         parameters, "seq" + juce::String(stepSeqIndex) +"RATE", rateSelector);
     
+    addAndMakeVisible(glideSlider);
+    glideAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(vts, "Glide", glideSlider.getSlider());
+
 }
 
 void StepSequencer::resized()
@@ -117,9 +120,11 @@ void StepSequencer::resized()
     auto area = getLocalBounds();
     auto bottomArea = area.removeFromBottom(15);
 //    auto modulationArea = area.removeFromTop(40);
-    auto offsetArea = area.removeFromTop(30);
     int leftSize = leftWidth;
+
     auto leftArea = area.removeFromLeft(leftSize);
+    auto offsetArea = area.removeFromTop(30);
+    
     stepCountSlider.setBounds(bottomArea.removeFromRight(bottomArea.getWidth()-leftWidth+6));
 
     int stepWidth = area.getWidth() / numSteps;
@@ -141,8 +146,8 @@ void StepSequencer::resized()
         // Optional: also hide offset knobs beyond stepCount
         offsetKnobs[i]->setVisible(i < stepCount);
     }
-
-    rateSelector.setBounds(leftArea.withHeight(30));
+    rateSelector.setBounds(leftArea.removeFromTop(30));
+    glideSlider.setBounds(leftArea.removeFromTop(leftArea.getHeight()/2));
 //    modNumeratorButton.setBounds(150, 10, 120, 24);
 //    modDenominatorButton.setBounds(290, 10, 140, 24);
 //    modAmountButton.setBounds(440, 10, 120, 24);
@@ -266,7 +271,9 @@ void StepSequencer::updateFromHostPosition(double ppqPosition, double bpm)
         if (stepToTrigger >= 0)
         {
             currentStep = stepToTrigger;
-            *parameters.getRawParameterValue("seq" + juce::String(seqIndex) + "CURRENT_STEP") = currentStep;
+            auto param = parameters.getParameter(PID::seqCurrentStep[seqIndex-1]);
+            param->setValueNotifyingHost(currentStep);
+//            *parameters.getRawParameterValue("seq" + juce::String(seqIndex) + "CURRENT_STEP") = currentStep;
             repaint();
         }
         
@@ -285,7 +292,17 @@ void StepSequencer::updateFromHostPosition(double ppqPosition, double bpm)
 //        currentStep = adjustedStep;
 
         // Update the parameter for automation
-        *parameters.getRawParameterValue("seq" + juce::String(seqIndex) + "CURRENT_STEP") = currentStep;
+//        *parameters.getRawParameterValue("seq" + juce::String(seqIndex) + "CURRENT_STEP") = currentStep;
+        if (auto* p = parameters.getParameter(PID::seqCurrentStep[seqIndex-1]))
+        {
+            const float min = 0.0f;
+            const float max = float(stepCount - 1);
+            const float real = juce::jlimit(min, max, float(currentStep));
+
+            // if it's AudioParameterInt/Float, this works:
+            const float norm = p->convertTo0to1(real);
+            p->setValueNotifyingHost(norm);
+        }
         repaint();
         // Calculate current step
 //        double beatInLoop = std::fmod(ppqPosition, sequenceLengthInBeats);

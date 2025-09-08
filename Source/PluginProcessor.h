@@ -12,7 +12,7 @@
 #include "FMVoice.h"
 #include "FMSynth.h"
 #include "FXChainProcessor.h"
-
+#include "SequencerEngine.h"
 //==============================================================================
 /**
 */
@@ -73,7 +73,8 @@ private:
     
     juce::dsp::Gain<float> gainProcessor;
 //    WahProc alienWah;
-
+    
+    std::array<SequencerEngine, 4> seqEngines;
     
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ButterflyAudioProcessor)

@@ -45,6 +45,8 @@ bool FMVoice::canPlaySound(juce::SynthesiserSound* sound)
 void FMVoice::startNote(int midiNoteNumber, float velocity,
                         juce::SynthesiserSound* /*sound*/, int /*currentPitchWheelPosition*/)
 {
+    lastOut1 = 0;
+    lastOut2 = 0;
     isStealing = false;
     env.reset();
     env.noteOn();
@@ -145,7 +147,9 @@ void FMVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
         }
 
         // add mirrored mod sources to your local FM signal
-        modSignal += sumExternal;
+        float feedbackMod = std::tanh(lastOut1+lastOut2);
+        modSignal += sumExternal +feedbackMod*selfModAmount;
+        
         
         // 3) warped carrier phase
         float warped = std::fmod(phase + modSignal, twoPi);
@@ -199,6 +203,8 @@ void FMVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
         {
             clearCurrentNote(); // Mark voice as free
         }
+        lastOut1 = out;
+        lastOut2 = lastOut1;
     }
 
 
@@ -309,7 +315,6 @@ float FMVoice::getSample(float t, Waveform wf, bool bandLimited, float dt)
             // t ∈ [0..1), convert to [0..2π)
             float angle = t * twoPi;
             return std::sin(angle);
-            DBG("sine");
         }
 
         case Waveform::Saw:
@@ -322,7 +327,6 @@ float FMVoice::getSample(float t, Waveform wf, bool bandLimited, float dt)
                 sample -= polyBLEP(t, dt);
             }
             return sample;
-            DBG("saw");
         }
 
         case Waveform::Square:
@@ -375,4 +379,5 @@ void FMVoice::setExternalModSources(const ExternalModParams* srcs, int count)
     for (int i = 0; i < juce::jmin(count, 4); ++i)
         extMod[i] = srcs[i];
 }
+
 

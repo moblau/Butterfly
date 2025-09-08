@@ -12,9 +12,9 @@
 
 #include <JuceHeader.h>
 #include "CustomLookAndFeel.h"
+#include "ParamIDs.h"
 
-
-class SliderWithLabel : public juce::Component
+class SliderWithLabel : public juce::Component, private juce::Timer
 {
 public:
     SliderWithLabel() = default;
@@ -45,6 +45,7 @@ public:
             isModulated = param->getValue();
             customLookAndFeel.setModulationStatus(isModulated);
         }
+        startTimerHz(30);
         
     }
     ~SliderWithLabel() override
@@ -126,6 +127,39 @@ public:
         
     }
 private:
+    float pfloat(const juce::String& id) const
+    {
+        if (auto* p = apvts.getRawParameterValue(id))
+            return p->load();
+        jassertfalse; return 0.f;
+    }
+    
+    void timerCallback() override
+    {
+        // 1) Keep visual "modulated" state in sync with the parameter (if present)
+        if (isModulated){
+            // 2) Compute seqIndex from your prefix (e.g. "0", "1", "2", ...)
+            const int seqIndex = prefix.getIntValue()-1 ; // robust even if prefix has non-digits at end
+
+            // 3) Pull current step + step value
+            // NOTE: adjust PID::... IDs to match your exact parameter IDs
+            const int currentStep = (int) pfloat(PID::seqCurrentStep[seqIndex]);
+
+            // Clamp the step index (0..7 here; adapt to your step count)
+            const int clampedStep = juce::jlimit(0, 7, currentStep);
+            const float stepValue = pfloat(PID::seqStep[seqIndex][clampedStep]); // expect 0..1
+            // 4) Push the mod amount into the L&F so it can draw a ring/arc
+            customLookAndFeel.setModAmount(stepValue);
+
+            // 5) Repaint the slider only (cheap)
+            slider.repaint();
+        }
+
+        
+    }
+
+    
+    
     juce::Label sliderValueLabel;
 
     juce::Slider slider;
@@ -137,6 +171,7 @@ private:
     juce::AudioProcessorValueTreeState& apvts;
     juce::String paramName;
     juce::String prefix;
+    int seqIndex;
 };
 
 class WaveformSelector : public juce::Component,
@@ -379,7 +414,7 @@ public:
         addParamListener("MOD_RATIO_NUM"+ prefix);
         addParamListener("MOD_RATIO_DEN"+ prefix);
         addParamListener("MOD_INDEX"    + prefix);
-
+        
         // Pre-allocate
         carrierBuf.resize(sampleCount);
         modBuf.resize(sampleCount);
@@ -388,6 +423,14 @@ public:
         buildPreview();
         startTimerHz(30); // light refresh for smooth UI
         setOpaque(false);
+        voiceIndex = voicePrefix.getIntValue()-1;
+        addParamListener(PID::seqCurrentStep[voiceIndex]);
+
+        for (int s = 0; s < 8; ++s) // or however many steps you have
+            addParamListener(PID::seqStep[voiceIndex][s]);
+
+        // optional: if modulation can be toggled on/off
+        addParamListener(PID::MODAMOUNT_mod[voiceIndex]);
     }
 
     ~WaveformVisualizer() override
@@ -406,8 +449,10 @@ public:
 
     static float mapSampleY(float v, const juce::Rectangle<int>& plot)
     {
-        return juce::jmap(v, -1.0f, 1.0f, (float)plot.getBottom(), (float)plot.getY());
-    }
+        if (!std::isfinite(v)) return std::numeric_limits<float>::quiet_NaN();
+        return juce::jmap(v, -1.0f, 1.0f,
+                          (float) plot.getBottom(),
+                          (float) plot.getY());    }
 
     void drawOverlayScope(juce::Graphics& g,
                           juce::Rectangle<int> r,
@@ -469,7 +514,7 @@ private:
     juce::String prefix;
     std::vector<float> carrierBuf, modBuf, outBuf;
     std::vector<juce::String> listenedIDs;
-
+    int voiceIndex;
     // Visualization settings
     static constexpr int sampleCount = 1024;      // screen resolution for curves
     static constexpr float carrierCycles = 2.5f;  // how many carrier periods across the width
@@ -523,13 +568,33 @@ private:
         if (auto* p = dynamic_cast<juce::AudioParameterFloat*>(apvts.getParameter("MOD_INDEX" + prefix)))
             modIndex = p->get(); // treat as radians; rescale if you prefer
 
+        float modOn = *apvts.getRawParameterValue(PID::MODAMOUNT_mod[voiceIndex]);
+        float modOffset = 0;
+        if (modOn){
+            const int currentStep = (int) pfloat(PID::seqCurrentStep[voiceIndex]);
+            const int clampedStep = juce::jlimit(0, 7, currentStep);
+
+            // step value (0..1)
+            const float stepValue = pfloat(PID::seqStep[voiceIndex][clampedStep]);
+            modOffset = stepValue*50;
+        }
+
         // Normalized time over [0, 1). We’ll draw carrierCycles across the width
         // Carrier angular freq (in “cycles-per-window” units):
         const float wc = twoPi * carrierCycles;
         const float wm = wc * (static_cast<float>(num) / static_cast<float>(den)); // ratio w.r.t carrier
 
         float carPhase, modPhase, pmPhase;
+        
+        const float baseI    = modIndex;         // read from APVTS
+        const float step     = modOffset;        // your stepValue or whatever (0..1)
+        const float depthRad = baseI * 0.5f;     // choose a depth scale you like
+        const float Ieff     = juce::jlimit(0.0f, 50.0f, baseI + step);
 
+//        DBG("baseI=" << baseI
+//            << " step=" << step
+//            << " Ieff=" << Ieff);
+        
         for (int n = 0; n < sampleCount; ++n)
         {
             float t = static_cast<float>(n) / static_cast<float>(sampleCount); // 0..1
@@ -539,9 +604,8 @@ private:
             const float m = oscSample(modWaveIdx, modPhase);       // [-1, 1]
             const float c = oscSample(carrierWaveIdx, carPhase);   // unmodded carrier
 
-            // Phase modulation: out(t) = carrier( phase_c + I * m(t) )
-            // This is stable and visually representative of FM for our UI.
-            pmPhase = carPhase + (modIndex * m);
+
+            pmPhase = carPhase + (Ieff * m);
 
             const float yOut = oscSample(carrierWaveIdx, pmPhase);
 
@@ -550,51 +614,7 @@ private:
             outBuf[n]     = yOut;
         }
     }
-//
-//    static void drawScope(juce::Graphics& g,
-//                          juce::Rectangle<int> r,
-//                          const std::vector<float>& data,
-//                          juce::Colour colour,
-//                          const char* title)
-//    {
-//        // Frame + title
-//        g.setColour(juce::Colours::white.withAlpha(0.2f));
-//        g.drawRect(r, 1);
-//        g.setColour(juce::Colours::white.withAlpha(0.8f));
-//        g.setFont(12.0f);
-//        g.drawText(title, r.removeFromTop(16), juce::Justification::centredLeft);
-//
-//        if (data.empty())
-//            return;
-//
-//        // Axis baseline
-//        auto plot = r.reduced(6, 6);
-//        const int w = plot.getWidth();
-//        const int h = plot.getHeight();
-//        const float midY = plot.getY() + h * 0.5f;
-//
-//        g.setColour(juce::Colours::white.withAlpha(0.15f));
-//        g.drawLine((float)plot.getX(), midY, (float)plot.getRight(), midY);
-//
-//        // Polyline
-//        juce::Path p;
-//        const int N = juce::jmin((int)data.size(), w); // 1 px per sample
-//        if (N <= 1) return;
-//
-//        auto x0 = (float)plot.getX();
-//        auto y0 = juce::jmap(data[0], -1.0f, 1.0f, (float)plot.getBottom(), (float)plot.getY());
-//        p.startNewSubPath(x0, y0);
-//        for (int i = 1; i < N; ++i)
-//        {
-//            const float x = (float)plot.getX() + (float)i;
-//            const float y = juce::jmap(data[i], -1.0f, 1.0f, (float)plot.getBottom(), (float)plot.getY());
-//            p.lineTo(x, y);
-//        }
-//
-//        g.setColour(colour.withAlpha(0.95f));
-//        g.strokePath(p, juce::PathStrokeType(1.8f, juce::PathStrokeType::JointStyle::curved,
-//                                                juce::PathStrokeType::EndCapStyle::rounded));
-//    }
+
 
     // APVTS listener
     void parameterChanged(const juce::String&, float) override
@@ -613,4 +633,21 @@ private:
     }
 
     std::atomic<bool> needsRebuild { true };
+    
+    float pfloat(const juce::String& id) const
+    {
+        if (auto* p = apvts.getRawParameterValue(id)) return p->load();
+        return 0.0f;
+    }
+
+    int seqIndexFromPrefix() const
+    {
+        // if prefix is "1","2","3","4"... -> map to 0..N-1
+        const int raw = prefix.getIntValue();
+        // clamp to your voice count (here assuming 1..4); change 4 to your max voices
+        const int idx = juce::jlimit(1, 4, raw) - 1;
+        return idx;
+    }
+    float modIndexDepth = 0.0f;   // how much the step adds (you can surface a param for this)
+    bool  modIndexFlag  = true;
 };

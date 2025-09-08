@@ -1,0 +1,14 @@
+/*
+  ==============================================================================
+
+    SequencerEngine.cpp
+    Created: 7 Sep 2025 11:42:31pm
+    Author:  Morris Blaustein
+
+  ==============================================================================
+*/
+
+#include "SequencerEngine.h"
+float SequencerEnginer::updateBySample(){
+    
+}

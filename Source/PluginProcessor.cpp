@@ -22,6 +22,7 @@ apvts(*this, nullptr, "PARAMETERS", createParameters()), fxChainProcessor(apvts,
     for (int i = 0; i < 4; ++i)
     {
         auto* voice = new FMVoice(apvts, getPlayHead(), i+1);
+        voice->setSequencerEngine(&seqEngines[i]);
         synth.addVoice (voice);
 
         // Now that we're in prepareToPlay, we know sampleRate & blockSize:
@@ -581,23 +582,28 @@ juce::AudioProcessorValueTreeState::ParameterLayout ButterflyAudioProcessor::cre
         0,1,0));
     
     parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID("Frequency6modulate", 1),
-        "Frequency6modulate",
+        juce::ParameterID("Frequency 5modulate", 1),
+        "Frequency 5modulate",
         0.0f, 1.0f, 0.0f));
     
     parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID("Resonance6modulate", 1),
-        "Feedback6modulate",
+        juce::ParameterID("Resonance5modulate", 1),
+        "Feedback5modulate",
         0.0f, 1.0f, 0.0f));
     
     parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID("Drive6modulate", 1),
-        "Drive6modulate",
+        juce::ParameterID("Drive5modulate", 1),
+        "Drive5modulate",
         0.0f, 1.0f, 0.0f));
     
     parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
-        juce::ParameterID("Envelope6modulate", 1),
-        "Env6modulate",
+        juce::ParameterID("Envelope5modulate", 1),
+        "Envelope5modulate",
+        0.0f, 1.0f, 0.0f));
+    
+    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID("Glide", 1),
+        "Glide",
         0.0f, 1.0f, 0.0f));
     
     

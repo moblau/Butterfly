@@ -48,11 +48,11 @@ public:
     
     void setModulationStatus(bool shouldModulate){ isModulated = shouldModulate; };
     
-    void setModAmount(int amt) { modAmount = amt; };
+    void setModAmount(float amt) { modAmount = amt; };
     
 private:
     int isModulated;
-    float modAmount;
+    float modAmount = 0;
 };
 
 

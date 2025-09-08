@@ -4,6 +4,7 @@
 #include "SmoothDownsampler.h"
 #include "Filter.h"
 #include "ResonatorProcessor.h"
+#include "SequencerEngine.h"
 
 class FMVoice : public juce::SynthesiserVoice
 {
@@ -57,9 +58,13 @@ public:
     };
 
     void setExternalModSources(const ExternalModParams* srcs, int count);
-
-private:
     
+    
+    void setSelfModAmt(float sma) { selfModAmount = sma; };
+    void setSequencerEngine(SequencerEngine* eng){ lane = eng;};
+    
+private:
+    const SequencerEngine* lane = nullptr;
     ExternalModParams extMod[4];
     float  extModPhase[4] { 0,0,0,0 };  // local phases for mirrored sources
     
@@ -102,4 +107,8 @@ private:
     Filter voiceFilter1, voiceFilter2;
     ResonatorProcessor resonator;
     
+
+    float selfModAmount;
+    
+    float lastOut1, lastOut2;
 };

@@ -78,11 +78,32 @@ void CustomLookAndFeel::drawRotarySlider(juce::Graphics& g, int x, int y, int wi
         const float indicatorCx = cx;           // center X stays the same
         const float indicatorCy = cy + radius * 0.7f; // push down near bottom edge
 
-        g.setColour(juce::Colour::fromRGB(140,52,31));
+        g.setColour(juce::Colour::fromRGB(50,25,12 ));
         g.fillEllipse(indicatorCx - indicatorR,
                       indicatorCy - indicatorR,
                       indicatorR * 2.0f,
                       indicatorR * 2.0f);
+        const float modAngleSpan = juce::jlimit(0.0f, 1.0f, modAmount) * angleRange;
+        // Start at the current thumb angle, extend clockwise
+        const float modStart = angle;
+        const float modEnd   = juce::jlimit(rotaryStartAngle, rotaryEndAngle, modStart + modAngleSpan);
+
+        // Draw slightly outside the main arc so it reads clearly
+        const float modOffset   = lineW * 0.55f;     // push the arc outward a touch
+        const float modArcR     = radius + modOffset;
+        const float modThickness= juce::jmax(1.5f, lineW * 0.8f);
+
+        // Orange tone you asked for
+        const juce::Colour modColour = juce::Colour::fromRGB(255, 140, 0).withAlpha(0.95f);
+
+        // If the arc would overrun the end, we just clamp (no wrap-around)
+        juce::Path modPath;
+        modPath.addCentredArc(cx, cy, modArcR, modArcR, 0.0f, modStart, modEnd, true);
+
+        g.setColour(modColour);
+        g.strokePath(modPath, juce::PathStrokeType(modThickness,
+                                                   juce::PathStrokeType::curved,
+                                                   juce::PathStrokeType::rounded));
 
     }
 
