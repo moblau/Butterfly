@@ -10,6 +10,7 @@ public:
     virtual void prepare(double sampleRate, int samplesPerBlock) = 0;
     virtual void reset() = 0;
     virtual void process(juce::AudioBuffer<float>& buffer) = 0;
+    
 
 protected:
     juce::AudioProcessorValueTreeState& apvts;

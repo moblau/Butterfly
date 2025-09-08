@@ -103,3 +103,85 @@ void ResonatorProcessor::process(juce::AudioBuffer<float>& buffer)
         buffer.setSample(1, sample, out_r);
     }
 }
+float ResonatorProcessor::processSample(float input, int channel)
+{
+    float offsetHz = (offsetNorm * 2.0f - 1.0f) * 1000.0f * offsetStrength;
+
+    float baseFreq = sr / delayInSamples;
+    float newFreq  = juce::jlimit<float>(20.0f, sr * 0.5f - 1.0f, baseFreq + offsetHz);
+    float newDelayInSamples = sr / newFreq;
+
+    delayLine.setDelay(newDelayInSamples);
+
+    float delayed = delayLine.popSample(channel);
+    float out     = input + delayed * feedbackAmount;
+
+    delayLine.pushSample(channel, out);
+    return out;
+}
+
+//
+//float ResonatorProcessor::processSample (float input, int channel)
+//{
+//    // (You’ll want to store these in member vars instead of fetching from apvts each time if possible)
+//    float offsetNorm        = *apvts.getRawParameterValue(PID::res_offset[res_index]);
+//    float feedbackAmount    = *apvts.getRawParameterValue(PID::res_feedback[res_index]);
+//    float offsetStrength    = *apvts.getRawParameterValue(PID::offset_strength[res_index]);
+//
+//    bool modResOffsetActive        = *apvts.getRawParameterValue(PID::RESOFF_mod[res_index]);
+//    bool modResFeedbackActive      = *apvts.getRawParameterValue(PID::RESFDB_mod[res_index]);
+//    bool modResOffsetStrengthActive= *apvts.getRawParameterValue(PID::OFFSTR_mod[res_index]);
+//
+////    int currentStep = static_cast<int>(*apvts.getRawParameterValue(PID::seqCurrentStep[res_index]));
+////    float stepValue = *apvts.getRawParameterValue(PID::seqStep[res_index][currentStep]);
+//
+//    // Apply modulation
+//    if (modResOffsetStrengthActive)
+//        offsetStrength += juce::jlimit(0.0f, 1.0f, stepValue);
+//
+//    if (modResFeedbackActive)
+//        feedbackAmount += juce::jlimit(0.0f, 1.0f, stepValue);
+//
+//    if (modResOffsetActive)
+//        offsetNorm += juce::jlimit(0.0f, 1.0f, stepValue);
+//
+//    float offsetHz = (offsetNorm * 2.0f - 1.0f) * 1000.0f * offsetStrength;
+//
+//    // Compute frequency/delay
+//    float baseFreq = sr / delayInSamples;
+//    float newFreq = juce::jlimit<float>(20.0f, sr / 2.0f - 1.0f, baseFreq + offsetHz);
+//    float newDelayInSamples = sr / newFreq;
+//
+//    delayLine.setDelay(newDelayInSamples);
+//
+//    // Process one channel
+//    float delayed = delayLine.popSample(channel);
+//    float out = input + delayed * feedbackAmount;
+//
+//    delayLine.pushSample(channel, out);
+//    return out;
+//}
+
+void ResonatorProcessor::updateParameters()
+{
+    offsetNorm     = *apvts.getRawParameterValue(PID::res_offset[res_index]);
+    feedbackAmount = *apvts.getRawParameterValue(PID::res_feedback[res_index]);
+    offsetStrength = *apvts.getRawParameterValue(PID::offset_strength[res_index]);
+
+    modResOffsetActive         = *apvts.getRawParameterValue(PID::RESOFF_mod[res_index]);
+    modResFeedbackActive       = *apvts.getRawParameterValue(PID::RESFDB_mod[res_index]);
+    modResOffsetStrengthActive = *apvts.getRawParameterValue(PID::OFFSTR_mod[res_index]);
+
+    int currentStep = static_cast<int>(*apvts.getRawParameterValue(PID::seqCurrentStep[res_index]));
+    stepValue       = *apvts.getRawParameterValue(PID::seqStep[res_index][currentStep]);
+
+    // Apply modulation
+    if (modResOffsetStrengthActive)
+        offsetStrength = juce::jlimit(0.0f, 1.0f, offsetStrength + stepValue);
+
+    if (modResFeedbackActive)
+        feedbackAmount = juce::jlimit(0.0f, .95f, feedbackAmount + stepValue);
+
+    if (modResOffsetActive)
+        offsetNorm = juce::jlimit(0.0f, 1.0f, offsetNorm + stepValue);
+}

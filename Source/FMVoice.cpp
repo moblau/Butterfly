@@ -1,7 +1,7 @@
 #include "FMVoice.h"
 
-FMVoice::FMVoice(juce::AudioProcessorValueTreeState &apvtsRef,juce::AudioPlayHead* playHead, int voiceNum) : ds(0), voiceFilter1(apvtsRef,playHead), voiceFilter2(apvtsRef,playHead), resonator(apvtsRef,playHead,voiceNum) {
-    oversampling.reset(new juce::dsp::Oversampling<float>(2, 4, juce::dsp::Oversampling<float>::filterHalfBandPolyphaseIIR,true,true));
+FMVoice::FMVoice(juce::AudioProcessorValueTreeState &apvtsRef,juce::AudioPlayHead* playHead, int voiceNum, int osFactor) : ds(0), apvts(apvtsRef), voiceFilter1(apvtsRef,playHead), voiceFilter2(apvtsRef,playHead), resonator(apvtsRef,playHead,voiceNum), osFactor(osFactor) {
+    oversampling.reset(new juce::dsp::Oversampling<float>(2, osFactor, juce::dsp::Oversampling<float>::filterHalfBandPolyphaseIIR,true,true));
     quickReleaseEnvParams.attack = 0.0f;     // Instant attack
     quickReleaseEnvParams.decay = 0.0f;      // No decay
     quickReleaseEnvParams.sustain = 1.0f;    // Full sustain (until release)
@@ -12,6 +12,7 @@ FMVoice::FMVoice(juce::AudioProcessorValueTreeState &apvtsRef,juce::AudioPlayHea
 }
 
 void FMVoice::prepare(double sampleRate, int samplesPerBlock){
+    sr = sampleRate;
     juce::dsp::ProcessSpec spec;
     spec.sampleRate       = sampleRate;                        // e.g. 44100.0
     spec.maximumBlockSize = static_cast<juce::uint32> (samplesPerBlock);
@@ -27,13 +28,14 @@ void FMVoice::prepare(double sampleRate, int samplesPerBlock){
     oversampling->initProcessing(static_cast<size_t> (spec.maximumBlockSize));
     quickReleaseEnv.setSampleRate(sampleRate);
     quickReleaseEnv.reset();
-    voiceFilter1.prepare(sampleRate, samplesPerBlock);
+    voiceFilter1.prepare(sampleRate*osFactor, samplesPerBlock);
     voiceFilter1.setEnvelopeStatus(false);
-    voiceFilter2.prepare(sampleRate, samplesPerBlock);
+    voiceFilter2.prepare(sampleRate*osFactor, samplesPerBlock);
     voiceFilter2.setEnvelopeStatus(true);
     
-    resonator.prepare(sampleRate,samplesPerBlock);
-
+    resonator.prepare(sampleRate*osFactor,samplesPerBlock);
+    lane->prepare(sampleRate*osFactor); //osFactor
+    modLane->prepare(sampleRate*osFactor);
 
 }
 
@@ -118,20 +120,54 @@ void FMVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
 
     const float twoPi    = juce::MathConstants<float>::twoPi;
     const float inv2Pi   = 1.0f / twoPi;
-    float leftGain  = std::cos(pan * juce::MathConstants<float>::pi * 0.5f);
-    float rightGain = std::sin(pan * juce::MathConstants<float>::pi * 0.5f);
+    
 
     // Main oversampled synthesis loop
+    voiceFilter1.update();
+    voiceFilter2.update();
+    resonator.updateParameters();
     for (int i = 0; i < osNumSamples; ++i)
     {
+        float stepValue = lane->valueAtSample(i, sr);
+        float modStepValue = modLane->valueAtSample(i, sr);
+//        updateParamsWithGlide(stepValue);
+        
+        float modNumNow = voiceParams.modNum;
+        float modDenNow = voiceParams.modDen;
+        if (voiceParams.modDenOn){
+            modNumNow = juce::jlimit<float>(1,5,voiceParams.modNum+stepValue*5);
+        }
+        if (voiceParams.modNumOn){
+            modDenNow = juce::jlimit<float>(1,5,voiceParams.modDen+stepValue*5);
+        }
+        setModulationRatio(modNumNow, modDenNow);
+        
+        if (voiceParams.modDetuneOn)
+        {
+            setDetune(juce::jlimit<float>(0,1,voiceParams.detune+stepValue));
+        }
+        
+        
         // 1) modulator phase [0..1)
         float tMod = std::fmod(modPhase * inv2Pi, 1.0f);
         if (tMod < 0.0f) tMod += 1.0f;
 
         // 2) modulator output
         float rawMod = getSample(tMod, modWaveform, false, 0.0f);
-        modSignal = rawMod * modulationIndex;
-
+        float modulationIndexNow = juce::jlimit<float>(1,50,modulationIndex+stepValue*50);
+        if ( voiceParams.modAmountOn ){
+            modSignal = rawMod * modulationIndexNow;
+        }
+        else{
+            modSignal = rawMod*voiceParams.modIndex;
+        }
+        float panNow = pan;
+        if (voiceParams.modPanOn){
+            panNow = juce::jlimit<float>(0,1,panNow+stepValue);
+        }
+        float leftGain  = std::cos(panNow * juce::MathConstants<float>::pi * 0.5f);
+        float rightGain = std::sin(panNow * juce::MathConstants<float>::pi * 0.5f);
+        
         float sumExternal = 0.0f;
         for (int k = 0; k < 4; ++k)
         {
@@ -172,12 +208,13 @@ void FMVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
         float out = carrierSample * level;
         
         // 8) any other DSP (your ds)
+        if (voiceParams.modDownsampleOn){
+            ds.setFactor(juce::jlimit<float>(0,50,voiceParams.downsample+stepValue*50));
+        }
         out = ds.processSample(out);
 
         // 9) write into oversampled buffer with pan & gain
-        leftOS[i] = out * leftGain;
-        if (rightOS)
-            rightOS[i] = out * rightGain;
+
 
         // 10) advance phases at oversampled rate
         phase    = std::fmod(phase    + carrierFrequency    * twoPi / osSampleRate, twoPi);
@@ -205,13 +242,55 @@ void FMVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
         }
         lastOut1 = out;
         lastOut2 = lastOut1;
+        
+        //filterProcesing
+        
+        
+//        voiceFilter1.setSeqStepValue(stepValue);
+//        float filter1out = voiceFilter1.processSample(out, 0);
+//        
+//        voiceFilter2.setSeqStepValue(modStepValue);
+//        float filter2out = voiceFilter2.processSample(filter1out, 0);
+//        
+//        resonator.setStepValue(stepValue);
+//        float resOut = resonator.processSample(filter2out, 0);
+        
+        leftOS[i] = out * leftGain;
+        if (rightOS)
+            rightOS[i] = out * rightGain;
+        
+        
     }
 
-
+    
 
     // Downsample back into the main buffer slice
 
     oversampling->processSamplesDown(tempBlock);
+    
+    float effectiveSampleRate = sr / std::pow(2.0f, osFactor);
+    for (int i = 0; i < numSamples; ++i)
+    {
+        // Get lane values at normal sample rate
+        float stepValue    = lane->valueAtSample(i, effectiveSampleRate);
+        float modStepValue = modLane->valueAtSample(i, effectiveSampleRate);
+
+        // Update filter and resonator parameters per sample
+        voiceFilter1.setSeqStepValue(stepValue);
+        float filter1Out = voiceFilter1.processSample(tempBuf.getSample(0, i), 0);
+
+        voiceFilter2.setSeqStepValue(modStepValue);
+        float filter2Out = voiceFilter2.processSample(filter1Out, 0);
+
+        resonator.setStepValue(stepValue);
+        float resOut = resonator.processSample(filter2Out, 0);
+
+        // Write back to temp buffer
+        tempBuf.setSample(0, i, resOut);
+        if (tempBuf.getNumChannels() > 1)
+            tempBuf.setSample(1, i, resOut); // simple mono copy to right channel
+    }
+    
 //    env.applyEnvelopeToBuffer(tempBuf, 0, numSamples);
 //    oversampling->processSamplesDown(tempBlock);
 
@@ -229,13 +308,15 @@ void FMVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
         env.applyEnvelopeToBuffer(tempBuf, 0, numSamples);
     }
     
-    voiceFilter1.update();
-    voiceFilter1.process(tempBuf);
+//    voiceFilter1.update();
+//    voiceFilter1.setSeqStepValue(stepValue);
+//    voiceFilter1.process(tempBuf);
+//    
+//    voiceFilter2.update();
+//    voiceFilter2.setSeqStepValue(stepValue);
+//    voiceFilter2.process(tempBuf);
     
-    voiceFilter2.update();
-    voiceFilter2.process(tempBuf);
-    
-    resonator.process(tempBuf);
+//    resonator.process(tempBuf);
     
     for (int ch = 0; ch < outputBuffer.getNumChannels(); ++ch)
     {
@@ -285,7 +366,7 @@ void FMVoice::setModulationRatio(int numerator, int denominator)
 
 void FMVoice::setModulationIndex(float newIndex)
 {
-    modulationIndex = juce::jlimit(0.0f, 100.0f, newIndex);
+    modulationIndex = juce::jlimit(0.0f, 100.0f, newIndex );
 }
 
 void FMVoice::setDetune(float semitoneOffset)
@@ -381,3 +462,36 @@ void FMVoice::setExternalModSources(const ExternalModParams* srcs, int count)
 }
 
 
+void FMVoice::updateParamsPerBlock(VoiceParams vp)
+{
+    voiceParams = vp;
+    setPan(vp.pan);
+    setDetune(vp.detune);
+    setAlias(vp.alias);
+    setWaveform(vp.carrierWaveform);
+    setModulatorWaveform(vp.modulatorWaveform);
+    setModulationIndex(vp.modIndex);
+    setModulationRatio(vp.modNum, vp.modDen);
+    setSelfModAmt(vp.selfModAmt);
+    setDownsampleFactor(vp.downsample);
+    bpm = vp.bpm;
+    ppq = vp.ppq;
+}
+
+//void FMVoice::updateParamsWithGlide(float value)
+//{
+//    setPan(juce::jlimit(0.0f, 1.0f, pan + value));
+//
+//    setDetune(detuneRatio + value);
+//    // detuneRatio is multiplicative, usually don’t clamp to [0,1] because it’s a ratio, not semitones.
+//    // If you really want semitone offset clamped, do that before converting.
+//
+//    setModulationIndex(juce::jlimit(0.0f, 50.0f, modulationIndex + value * 50.0f));
+//
+//    setModulationRatio(
+//        juce::jlimit(1, 5, modRatioNum + static_cast<int>(value * 5.0f)),
+//        juce::jlimit(1, 5, modRatioDen + static_cast<int>(value * 5.0f))
+//    );
+//
+//    setDownsampleFactor(juce::jlimit<float>(0, 50, dsFactor + value * 50.0f));
+//}

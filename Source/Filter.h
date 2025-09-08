@@ -22,7 +22,12 @@ public:
     void setVoiceNum(int voiceIndex){
         filterIndex = voiceIndex;
     }
+    
+    void setSeqStepValue(float sv){ stepValue = sv;}
+    float processSample(float input, int ch);
+
 private:
+    float stepValue;
     static constexpr int maxPoles = 4;
 
     double sampleRate = 44100.0;

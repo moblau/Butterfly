@@ -58,8 +58,8 @@ void Filter::update()
     const bool envelopeModOn   = *apvts.getRawParameterValue("Envelope5modulate");
     const bool driveModOn   = *apvts.getRawParameterValue("Drive5modulate");
 
-    const int currentStep = (int) pfloat(PID::seqCurrentStep[4]);
-    const float stepValue = pfloat(PID::seqStep[4][juce::jlimit(0, 7, currentStep)]);
+//    const int currentStep = (int) pfloat(PID::seqCurrentStep[4]);
+//    const float stepValue = pfloat(PID::seqStep[4][juce::jlimit(0, 7, currentStep)]);
     
     const float rawDrive = pfloat(PID::filter_drive);
     driveParam = juce::jlimit(0.0f, 1.0f, rawDrive);
@@ -109,8 +109,8 @@ void Filter::update()
 
         // seq{index}CURRENT_STEP and corresponding step value
         const int seqIdx = juce::jlimit(0, 4, i); // map 0..3 → seq1..seq4 (0..3); adjust if you need seq5
-        const int currentStep = (int) pfloat(PID::seqCurrentStep[seqIdx]);
-        const float stepValue = pfloat(PID::seqStep[seqIdx][juce::jlimit(0, 7, currentStep)]);
+//        const int currentStep = (int) pfloat(PID::seqCurrentStep[seqIdx]);
+//        const float stepValue = pfloat(PID::seqStep[seqIdx][juce::jlimit(0, 7, currentStep)]);
 
         float filterSeq = 0.0f;
         if (modFreqActive)
@@ -203,4 +203,51 @@ void Filter::process(juce::AudioBuffer<float>& buffer)
             channelData[i] = (float) z[ch][numActivePoles - 1];
         }
     }
+}
+
+float Filter::processSample(float input, int ch)
+{
+    if (fc == 22000.0f)
+        return input;
+
+    // Envelope per-sample target
+    if (usesEnvelope)
+    {
+        const double env    = adsr.getNextSample();
+        const float  envMag = *apvts.getRawParameterValue(PID::filter_env);
+        const double target = juce::jlimit(20.0, 20000.0, (double) fc + env * envMag * 22000.0);
+        cutoffSmoothed.setTargetValue(target);
+    }
+    else
+    {
+        cutoffSmoothed.setTargetValue(juce::jlimit(20.0, 20000.0, (double) fc));
+    }
+
+    const double modFc = cutoffSmoothed.getNextValue();
+    computeCoeffs(modFc);
+
+    // Drive
+    if (driveParam > 0.0f)
+    {
+        const float x = (float)(input * preGain);
+        const float y = softClip(x); // or std::tanh(x)
+        input = (double)(y * postGain);
+    }
+
+    // Ladder filter core
+    double sigma = 0.0;
+    for (int p = 0; p < numActivePoles; ++p)
+        sigma += z[ch][p] * beta[p];
+
+    input *= (1.0 + K);
+    double u = alpha0 * (input - K * sigma);
+
+    for (int p = 0; p < numActivePoles; ++p)
+    {
+        u = z[ch][p] + alpha * (u - z[ch][p]);
+        const double vn = (u - z[ch][p]) * alpha;
+        z[ch][p] = u + vn;
+    }
+
+    return (float) z[ch][numActivePoles - 1];
 }

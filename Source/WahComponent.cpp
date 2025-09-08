@@ -3,7 +3,8 @@
 WahComponent::WahComponent(juce::AudioProcessorValueTreeState& apvtsRef) : FXUnit(apvtsRef),
 freqSlider("Frequency", apvtsRef, juce::String(5)),
 feedbackSlider("Feedback", apvtsRef, juce::String(5)),
-delaySlider("Delay", apvtsRef,juce::String(5))
+delaySlider("Delay", apvtsRef,juce::String(5)),
+offsetSlider("Offset", apvtsRef,juce::String(5))
 {
     setSize(200, 200);
     
@@ -54,6 +55,9 @@ delaySlider("Delay", apvtsRef,juce::String(5))
 //    delaySlider.setTextValueSuffix(" smp");
     addAndMakeVisible(delaySlider);
     delayAttachment= std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(apvtsRef, "wahDelay", delaySlider.getSlider());
+    
+    addAndMakeVisible(offsetSlider);
+    offsetAttachment= std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(apvtsRef, "Offset", offsetSlider.getSlider());
 }
 
 //void WahComponent::resized() {
@@ -68,7 +72,9 @@ void WahComponent::resized()
     // Top: toggle button (fixed height)
     area.removeFromTop(30);
     auto toggleArea = area.removeFromTop(area.getHeight()/2);
-    syncToggle.setBounds(toggleArea.removeFromLeft(toggleArea.getWidth()/2));
+    auto topLeft = toggleArea.removeFromLeft(toggleArea.getWidth()/2);
+    syncToggle.setBounds(topLeft.removeFromTop(20));
+    offsetSlider.setBounds(topLeft);
 
     // Next row: either freqSlider or syncRateBox (same rectangle)
 //    auto controlArea = area.removeFromTop(40);

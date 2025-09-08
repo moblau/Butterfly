@@ -17,12 +17,30 @@ void FXChainProcessor::prepare(double sampleRate, int samplesPerBlock)
 
 void FXChainProcessor::process(juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
-    for (auto& fx : fxProcessors){
-        if (auto* filt = dynamic_cast<Filter*>(fx.get()))
-            filt->update();
-        fx->process(buffer);
-        
+    const int numChannels = buffer.getNumChannels();
+    const int numSamples  = buffer.getNumSamples();
+
+    for (auto& fx : fxProcessors)
+    {
+        if (auto* wah = dynamic_cast<WahProcessor*>(fx.get()))
+        {
+            // Update parameters once per block
+            wah->updateParameters();
+
+            // Process each sample per channel
+            for (int channel = 0; channel < numChannels; ++channel)
+            {
+                float* channelData = buffer.getWritePointer(channel);
+                for (int sample = 0; sample < numSamples; ++sample)
+                {
+                    channelData[sample] = wah->processSample(channelData[sample], channel);
+                }
+            }
+        }
+        else
+        {
+            // For other FX that still use buffer-level processing
+            fx->process(buffer);
+        }
     }
-    
-        
 }

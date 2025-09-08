@@ -16,13 +16,14 @@ ButterflyAudioProcessor::ButterflyAudioProcessor()
                       .withOutput("Output", juce::AudioChannelSet::stereo(), true)),
 apvts(*this, nullptr, "PARAMETERS", createParameters()), fxChainProcessor(apvts, getPlayHead()), synth(apvts)
 {
-
+    osFactor = 3;
     // ... repeat for 4 voices
     synth.clearVoices();
     for (int i = 0; i < 4; ++i)
     {
-        auto* voice = new FMVoice(apvts, getPlayHead(), i+1);
+        auto* voice = new FMVoice(apvts, getPlayHead(), i+1, osFactor);
         voice->setSequencerEngine(&seqEngines[i]);
+        voice->setModSeqEngine(&seqEngines[4]);
         synth.addVoice (voice);
 
         // Now that we're in prepareToPlay, we know sampleRate & blockSize:
@@ -30,6 +31,8 @@ apvts(*this, nullptr, "PARAMETERS", createParameters()), fxChainProcessor(apvts,
     synth.clearSounds();
     synth.addSound(new FMSound());
     gainProcessor.setRampDurationSeconds(0.2);
+    cacheParameterPointers();
+
 }
 
 ButterflyAudioProcessor::~ButterflyAudioProcessor()
@@ -112,6 +115,8 @@ void ButterflyAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBl
     }
 //    alienWah.prepare(sampleRate, samplesPerBlock, sampleRate); // Allow a reasonable max delay
 //    alienWah.setParameters(0.6f, 0.0f, 0.5f, 20);
+    for (auto& eng : seqEngines)
+        eng.prepare(sampleRate*osFactor);
 }
 
 void ButterflyAudioProcessor::releaseResources()
@@ -170,6 +175,18 @@ struct VoiceInfo {
 
 void ButterflyAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
+    if (auto* ph = getPlayHead())
+    {
+        juce::AudioPlayHead::CurrentPositionInfo pos;
+        if (ph->getCurrentPosition(pos))
+        {
+            bpm = pos.bpm;
+            ppq = pos.ppqPosition;
+        }
+    }
+    synth.setTimeInfo(bpm, ppq);
+    for (auto& seq : seqEngines)
+            seq.beginBlock(bpm, ppq);
     int currentStep = 0;
 //    if (auto* playhead = getPlayHead()){
 //        juce::AudioPlayHead::CurrentPositionInfo info;
@@ -249,6 +266,9 @@ void ButterflyAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, ju
         }
     
     
+    updateSequencersFromAPVTS();
+
+    
     juce::MidiBuffer midiCopy(midiMessages);
     synth.updateSynthParameters();
     synth.renderNextBlock(buffer, midiMessages, 0, buffer.getNumSamples());
@@ -302,19 +322,7 @@ juce::AudioProcessorValueTreeState::ParameterLayout ButterflyAudioProcessor::cre
     std::vector<std::unique_ptr<juce::RangedAudioParameter>> parameters;
 
     // Panning Parameters
-//    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("PAN1", 1), "Pan 1", 0.0f, 1.0f, 0.5f));
-//    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("PAN2", 1), "Pan 2", 0.0f, 1.0f, 0.5f));
-//    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("PAN3", 1), "Pan 3", 0.0f, 1.0f, 0.5f));
-//    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("PAN4", 1), "Pan 4", 0.0f, 1.0f, 0.5f));
-//
-//    // Detune Parameters
-//    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("DETUNE1", 1), "Detune 1", -0.5f, 0.5f, 0.0f));
-//    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("DETUNE2", 1), "Detune 2", -0.5f, 0.5f, 0.0f));
-//    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("DETUNE3", 1), "Detune 3", -0.5f, 0.5f, 0.0f));
-//    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(juce::ParameterID("DETUNE4", 1), "Detune 4", -0.5f, 0.5f, 0.0f));
 
-    // Modulation Ratio Numerator and Denominator (1 to 16)
-    
     
     //use emplace back vs push back
     //use reserve to allocate how many parameters.
@@ -606,6 +614,15 @@ juce::AudioProcessorValueTreeState::ParameterLayout ButterflyAudioProcessor::cre
         "Glide",
         0.0f, 1.0f, 0.0f));
     
+    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID("Offset", 1),
+        "Offset",
+        0.0f, 100.0f, 0.0f));
+    
+    parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID("Offset5modulate", 1),
+        "Offset5modulate",
+        0.0f, 1.0f, 0.0f));
     
     
     juce::NormalisableRange<float> envRange { 0.0f, 5000.0f, 1.0f };
@@ -674,3 +691,107 @@ juce::AudioProcessorValueTreeState::ParameterLayout ButterflyAudioProcessor::cre
     return { parameters.begin(), parameters.end() };
 }
 
+// Processor.cpp
+void ButterflyAudioProcessor::cacheParameterPointers()
+{
+    // Adjust these to your PID:: arrays / IDs
+    glidePtr = apvts.getRawParameterValue("Glide");
+
+    for (int s = 0; s < 5; ++s)
+    {
+        stepCountPtrs[s]  = apvts.getRawParameterValue(PID::seqStepCount[s]);
+        rateIndexPtrs[s]  = apvts.getRawParameterValue(PID::seqRateIndex[s]);
+
+        for (int i = 0; i < 8; ++i)
+        {
+            stepValPtrs[s][i]    = apvts.getRawParameterValue(PID::seqStep[s][i]);
+            stepOffsetPtrs[s][i] = apvts.getRawParameterValue(PID::seqOffset[s][i]); // your “offset{i}”
+        }
+    }
+}
+//
+float ButterflyAudioProcessor::rateIndexToBeatsPerStep (int idx)
+{
+    switch (idx) {
+        case 0:  return 16.0f;               // 4/1
+        case 1:  return 8.0f;                // 2/1
+        case 2:  return 4.0f;                // 1/1
+
+        case 3:  return 2.0f;                // 1/2
+        case 4:  return 2.0f/3.0f;           // 1/2T
+        case 5:  return 3.0f;                // 1/2.
+
+        case 6:  return 1.0f;                // 1/4
+        case 7:  return 1.0f/3.0f;           // 1/4T
+        case 8:  return 1.5f;                // 1/4.
+
+        case 9:  return 0.5f;                // 1/8
+        case 10: return (0.5f * 2.0f/3.0f);  // 1/8T
+        case 11: return 0.75f;               // 1/8.
+
+        case 12: return 0.25f;               // 1/16
+        case 13: return (0.25f * 2.0f/3.0f); // 1/16T
+        case 14: return 0.375f;              // 1/16.
+
+        case 15: return 0.125f;              // 1/32
+        case 16: return (0.125f * 2.0f/3.0f);// 1/32T
+        case 17: return 0.1875f;             // 1/32.
+        default: return 0.25f;
+    }
+}
+//
+    // In ButterflyAudioProcessor.cpp
+
+void ButterflyAudioProcessor::updateSequencersFromAPVTS()
+{
+    // 1) Host timing snapshot
+    double localBpm = 120.0, localPpq = 0.0;
+    if (auto* ph = getPlayHead())
+    {
+        juce::AudioPlayHead::CurrentPositionInfo pos;
+        if (ph->getCurrentPosition(pos))
+        {
+        #if JUCE_AUDIO_PLAY_HEAD_HAS_POSITION_GETTERS
+            if (pos.getBpm())         localBpm = *pos.getBpm();
+            if (pos.getPpqPosition()) localPpq = *pos.getPpqPosition();
+        #else
+            if (pos.bpm > 0.0)        localBpm = pos.bpm;
+            localPpq = pos.ppqPosition;
+        #endif
+        }
+    }
+    bpm = localBpm;
+    ppq = localPpq;
+
+    // 2) Pull shared glide (0..1)
+    const float glide = glidePtr ? glidePtr->load() : 0.0f;
+
+    // 3) Build params for each of the 4 sequencer lanes and seed engines
+    for (int s = 0; s < 5; ++s)
+    {
+        StepSequencerParams p;
+
+        // step count
+        p.stepCount = juce::jlimit(1, 8,
+            stepCountPtrs[s] ? (int) stepCountPtrs[s]->load() : 8);
+
+        // beats per step from RATE choice index
+        const int rateIdx = rateIndexPtrs[s] ? (int) rateIndexPtrs[s]->load() : 12; // default "1/16"
+        p.beatsPerStep = rateIndexToBeatsPerStep(rateIdx);
+
+        // step values 0..1
+        for (int i = 0; i < 8; ++i)
+            p.stepValues[i] = stepValPtrs[s][i] ? stepValPtrs[s][i]->load() : 0.0f;
+
+        // per-step boundaries = i + offset[i]  (offsets in ~[-0.5, +0.5])
+        for (int i = 0; i < 8; ++i)
+            p.stepOffsets[i] = stepOffsetPtrs[s][i] ? stepOffsetPtrs[s][i]->load() : 0.0f;
+        p.stepOffsets[8] = p.stepOffsets[0]; // wrap boundary
+
+        p.glideAmount = glide; // fraction of step duration to glide (0..1)
+
+        // Ship to engine and seed this block's timing
+        seqEngines[s].setParams(p);
+//        seqEngines[s].beginBlock(bpm, ppq);
+    }
+}

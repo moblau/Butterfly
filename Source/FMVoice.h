@@ -5,11 +5,35 @@
 #include "Filter.h"
 #include "ResonatorProcessor.h"
 #include "SequencerEngine.h"
+#include "ParamIDs.h"
 
+struct VoiceParams
+{
+    float detune;
+    float pan;
+    float downsample;
+    float modIndex;
+    float modNum;
+    float modDen;
+    float carrierWaveform;
+    float modulatorWaveform;
+    bool alias;
+    float selfModAmt;
+    float bpm;
+    float ppq;
+    
+    bool modPanOn       = false;
+    bool modDetuneOn    = false;
+    bool modAmountOn    = false;   // FM index
+    bool modNumOn       = false;   // ratio numerator
+    bool modDenOn       = false;   // ratio denominator
+    bool modDownsampleOn= false;
+    
+};
 class FMVoice : public juce::SynthesiserVoice
 {
 public:
-    FMVoice(juce::AudioProcessorValueTreeState &apvtsRef,juce::AudioPlayHead* playHead, int voiceNum);
+    FMVoice(juce::AudioProcessorValueTreeState &apvtsRef,juce::AudioPlayHead* playHead, int voiceNum, int osFactor);
     
     void prepare(double sampleRate, int samplesPerBlock);
     bool canPlaySound(juce::SynthesiserSound* sound) override;
@@ -62,9 +86,17 @@ public:
     
     void setSelfModAmt(float sma) { selfModAmount = sma; };
     void setSequencerEngine(SequencerEngine* eng){ lane = eng;};
+    void setModSeqEngine(SequencerEngine* eng){ modLane = eng;};
+    
+    void updateParamsPerBlock(VoiceParams vp);
     
 private:
-    const SequencerEngine* lane = nullptr;
+    float sr;
+    float osFactor;
+    void updateParamsWithGlide(float value);
+    VoiceParams voiceParams;
+    SequencerEngine* lane = nullptr;
+    SequencerEngine* modLane = nullptr;
     ExternalModParams extMod[4];
     float  extModPhase[4] { 0,0,0,0 };  // local phases for mirrored sources
     
@@ -111,4 +143,6 @@ private:
     float selfModAmount;
     
     float lastOut1, lastOut2;
+    juce::AudioProcessorValueTreeState& apvts;
+    float bpm, ppq;
 };

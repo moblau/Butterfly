@@ -65,6 +65,14 @@ namespace PID
     inline const juce::String seqCurrentStep[5] {
         "seq1CURRENT_STEP","seq2CURRENT_STEP","seq3CURRENT_STEP","seq4CURRENT_STEP","seq5CURRENT_STEP"
     };
+    
+    inline const juce::String seqStepCount[5] {
+    "seq1STEP_COUNT","seq2STEP_COUNT","seq3STEP_COUNT","seq4STEP_COUNT","seq5STEP_COUNT"
+    };
+
+    inline const juce::String seqRateIndex[5] {
+    "seq1RATE","seq2RATE","seq3RATE","seq4RATE","seq5RATE"
+    };
 
     // Sequencer steps (5×8) and offsets (5×8)
     inline const juce::String seqStep[5][8] = {

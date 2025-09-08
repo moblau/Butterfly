@@ -17,10 +17,11 @@ private:
 //    juce::AudioProcessorValueTreeState& apvts;
 //    juce::Slider freqSlider, feedbackSlider, delaySlider;
     
-    SliderWithLabel freqSlider, feedbackSlider, delaySlider;
+    SliderWithLabel freqSlider, feedbackSlider, delaySlider, offsetSlider;
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> freqAttachment,
                                 feedbackAttachment,
-                                delayAttachment;
+                                delayAttachment,
+                                offsetAttachment;
     juce::ComboBox syncRateBox;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> syncRateAttachment;
     

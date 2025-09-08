@@ -75,7 +75,7 @@ StepSequencer::StepSequencer(int numSteps_, int stepSeqIndex,
 
     addAndMakeVisible(rateSelector);
     leftWidth = 70;
-//    modNumeratorButton.setButtonText("Numerator");
+   //    modNumeratorButton.setButtonText("Numerator");
 //    modDenominatorButton.setButtonText("Denominator");
 //    modAmountButton.setButtonText("Mod Gain");
 //    modGainButton.setButtonText("Carrier Gain");

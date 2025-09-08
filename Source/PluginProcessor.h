@@ -13,6 +13,7 @@
 #include "FMSynth.h"
 #include "FXChainProcessor.h"
 #include "SequencerEngine.h"
+#include "ParamIDs.h"
 //==============================================================================
 /**
 */
@@ -74,8 +75,19 @@ private:
     juce::dsp::Gain<float> gainProcessor;
 //    WahProc alienWah;
     
-    std::array<SequencerEngine, 4> seqEngines;
+    std::array<SequencerEngine, 5> seqEngines;
+    using ParamPtr = std::atomic<float>*;
+    ParamPtr glidePtr = nullptr;
+    ParamPtr stepCountPtrs[5] = { nullptr, nullptr, nullptr, nullptr };
+    ParamPtr rateIndexPtrs[5] = { nullptr, nullptr, nullptr, nullptr };
+    ParamPtr stepValPtrs[5][8]{};     // seqStep[s][i]
+    ParamPtr stepOffsetPtrs[5][8]{};
     
+    void cacheParameterPointers();             // called in ctor
+    static float rateIndexToBeatsPerStep (int idx);
+    void updateSequencersFromAPVTS();
+    double bpm, ppq;
+    int osFactor;
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (ButterflyAudioProcessor)
 };

@@ -9,6 +9,3 @@
 */
 
 #include "SequencerEngine.h"
-float SequencerEnginer::updateBySample(){
-    
-}

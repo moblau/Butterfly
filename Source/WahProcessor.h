@@ -5,27 +5,28 @@
 #include "ParamIDs.h"
 class WahProcessor : public DSPModule
 {
-public:
+    public:
     WahProcessor(juce::AudioProcessorValueTreeState& apvtsRef, juce::AudioPlayHead* playHead);
     ~WahProcessor() override;
     void prepare(double sampleRate, int samplesPerBlock) override;
     void reset() override;
-    void setParameters(float lfoFreq, float startPhase, float feedbackAmount, int delaySamples);
+    void updateParameters();
     void process(juce::AudioBuffer<float>& buffer) override;
-
-
+    float processSample(float in, int channel);
     
-private:
+    
+    private:
     juce::dsp::DelayLine<float> delayLineReal;
     juce::dsp::DelayLine<float> delayLineImag;
-
+    
     double sr = 44100.0;
-    float lfoFrequency = 0.6f;
+    float lfoFrequency[2] = {0.0};
     float lfoStartPhase = 0.0f;
     float feedbackAmount = 0.75f;
     int delayLength = 20;
-
-    float lfoPhase = 0.0f;
+    
+    float lfoPhase[2] = {0.0f};
     const int lfoSkipSamples = 25;
     std::complex<float> c;
+    float channelLfoOffset[2] = {0};
 };
