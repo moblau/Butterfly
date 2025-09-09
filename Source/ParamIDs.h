@@ -36,6 +36,10 @@ namespace PID
     inline const juce::String MOD_RATIO_NUM[4] { "MOD_RATIO_NUM1","MOD_RATIO_NUM2","MOD_RATIO_NUM3","MOD_RATIO_NUM4" };
     inline const juce::String MOD_RATIO_DEN[4] { "MOD_RATIO_DEN1","MOD_RATIO_DEN2","MOD_RATIO_DEN3","MOD_RATIO_DEN4" };
 
+    inline const juce::String OCTAVE[4] { "Octave1","Octave2","Octave3","Octave4" };
+    inline const juce::String VIBDEPTH[4] { "Vib Depth1","Vib Depth2","Vib Depth3","Vib Depth4" };
+    inline const juce::String VIBFREQ[4] { "Vib Freq1","Vib Freq2","Vib Freq3","Vib Freq4" };
+
     // Per-voice “modulate” flags
     inline const juce::String PAN_mod[4]        { "Pan1modulate","Pan2modulate","Pan3modulate","Pan4modulate" };
     inline const juce::String DETUNE_mod[4]     { "Detune1modulate","Detune2modulate","Detune3modulate","Detune4modulate" };
@@ -43,6 +47,10 @@ namespace PID
     inline const juce::String MODAMOUNT_mod[4]  { "Mod Amount1modulate","Mod Amount2modulate","Mod Amount3modulate","Mod Amount4modulate" };
     inline const juce::String NUM_mod[4]        { "Num1modulate","Num2modulate","Num3modulate","Num4modulate" };
     inline const juce::String DEN_mod[4]        { "Den1modulate","Den2modulate","Den3modulate","Den4modulate" };
+
+    inline const juce::String OCTAVE_mod[4]        { "Octave1modulate","Octave2modulate","Octave3modulate","Octave4modulate" };
+    inline const juce::String VIBDEPTH_mod[4]        { "Vib Depth1modulate","Vib Depth2modulate","Vib Depth3modulate","Vib Depth4modulate" };
+    inline const juce::String VIBFREQ_mod[4]        { "Vib Freq1modulate","Vib Freq2modulate","Vib Freq3modulate","Vib Freq4modulate" };
 
     inline const juce::String RESOFF_mod[4]     { "Resonator Offset1modulate","Resonator Offset2modulate","Resonator Offset3modulate","Resonator Offset4modulate" };
     inline const juce::String RESFDB_mod[4]     { "Resonator Feedback1modulate","Resonator Feedback2modulate","Resonator Feedback3modulate","Resonator Feedback4modulate" };

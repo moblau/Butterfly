@@ -51,14 +51,24 @@ void FMSynth::updateSynthParameters()
         vp.modulatorWaveform = pfloat(PID::MOD_WAVE[i]);
         vp.alias = pfloat(PID::aliasToggle[i]);
         vp.selfModAmt = pfloat(PID::MODMATRIX[i][i]);
+        vp.octave = pfloat(PID::OCTAVE[i]);
+        vp.vibFreq = pfloat(PID::VIBFREQ[i]);
+        vp.vibDepth =  pfloat(PID::VIBDEPTH[i]);
+        
+        
         vp.bpm = bpm;
         vp.ppq = ppq;
+        
+        
         vp.modPanOn         = (pfloat(PID::PAN_mod[i])        != 0.0f);
         vp.modDetuneOn      = (pfloat(PID::DETUNE_mod[i])     != 0.0f);
         vp.modAmountOn      = (pfloat(PID::MODAMOUNT_mod[i])  != 0.0f);
         vp.modNumOn         = (pfloat(PID::NUM_mod[i])        != 0.0f);
         vp.modDenOn         = (pfloat(PID::DEN_mod[i])        != 0.0f);
         vp.modDownsampleOn  = (pfloat(PID::DOWNSAMPLE_mod[i]) != 0.0f);
+        vp.modOctaveOn = (pfloat(PID::OCTAVE_mod[i]) != 0.0f);
+//        vp.modVibFreqOn = (pfloat(PID::VIBFREQ_mod[i]) != 0.0f);
+//        vp.modVibDepthOn = (pfloat(PID::VIBDEPTH_mod[i]) != 0.0f);
         
         voice->updateParamsPerBlock(vp);
         

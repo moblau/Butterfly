@@ -353,6 +353,17 @@ juce::AudioProcessorValueTreeState::ParameterLayout ButterflyAudioProcessor::cre
         parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
             juce::ParameterID("DOWNSAMPLE" + std::to_string(i), 1), "Downsample" + std::to_string(i), 0.0f, 50.0f, 1.0f));
         
+        parameters.push_back(std::make_unique<juce::AudioParameterInt>(
+            juce::ParameterID("Octave" + std::to_string(i), 1), "Octave" + std::to_string(i),-2, 2, 0));
+        
+        parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
+            juce::ParameterID("Vib Depth" + std::to_string(i), 1), "Vib Depth" + std::to_string(i), 0.0f, 1.0f, 0.0f));
+        
+        parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
+            juce::ParameterID("Vib Freq" + std::to_string(i), 1), "Vib Freq" + std::to_string(i), 0.0f, 25.0f, 1.0f));
+        
+        
+        
 
         parameters.push_back(std::make_unique<juce::AudioParameterChoice>(
             juce::ParameterID("MOD_WAVEFORM" + std::to_string(i), 1), "MOD_WAVEFORM" + std::to_string(i),
@@ -558,6 +569,21 @@ juce::AudioProcessorValueTreeState::ParameterLayout ButterflyAudioProcessor::cre
             juce::ParameterID("Den" + juce::String(i) + "modulate", 1),
             "Den" + juce::String(i) + "modulate",
             0.0f, 1.0f, 0.0f));
+        
+        parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
+            juce::ParameterID("Octave" + juce::String(i) + "modulate", 1),
+            "Octave" + juce::String(i) + "modulate",
+            0.0f, 1.0f, 0.0f));
+        
+//        parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
+//            juce::ParameterID("Vib Freq" + juce::String(i) + "modulate", 1),
+//            "Vib Freq" + juce::String(i) + "modulate",
+//            0.0f, 1.0f, 0.0f));
+//        
+//        parameters.push_back(std::make_unique<juce::AudioParameterFloat>(
+//            juce::ParameterID("Vib Depth" + juce::String(i) + "modulate", 1),
+//            "Vib Depth" + juce::String(i) + "modulate",
+//            0.0f, 1.0f, 0.0f));
         
     }
     

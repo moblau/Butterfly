@@ -30,6 +30,9 @@ private:
     SliderWithLabel downsampleSlider ;
     SliderWithLabel freqSlider ;
     SliderWithLabel resSlider;
+    SliderWithLabel vibratoFreqSlider;
+    SliderWithLabel vibratoDepthSlider;
+    SliderWithLabel octaveSlider;
     
     SliderWithLabel resonatorOffsetSlider;
     SliderWithLabel resonatorFeedbackSlider;
@@ -41,7 +44,7 @@ private:
     
     WaveformSelector carrierWaveform, modWaveform;
 
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> panAttach, detuneAttach, modIndexAttach, modRatioNumAttach, modRatioDenAttach, downsampleAttach, resOffsetAttach, resFeedbackAttach, resOffsetStrengthAttach;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> panAttach, detuneAttach, modIndexAttach, modRatioNumAttach, modRatioDenAttach, downsampleAttach, resOffsetAttach, resFeedbackAttach, resOffsetStrengthAttach, vibratoDepthAttach, vibratoFreqAttach, octaveAttach;
     std::unique_ptr<juce::AudioProcessorValueTreeState::ComboBoxAttachment> modWaveformAttach, waveformAttach;
 
     std::unique_ptr<WaveformVisualizer> oscPreview;

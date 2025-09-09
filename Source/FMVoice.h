@@ -21,6 +21,9 @@ struct VoiceParams
     float selfModAmt;
     float bpm;
     float ppq;
+    int octave;
+    float vibFreq;
+    float vibDepth;
     
     bool modPanOn       = false;
     bool modDetuneOn    = false;
@@ -28,6 +31,9 @@ struct VoiceParams
     bool modNumOn       = false;   // ratio numerator
     bool modDenOn       = false;   // ratio denominator
     bool modDownsampleOn= false;
+    bool modOctaveOn = false;
+    bool modVibFreqOn = false;
+    bool modVibDepthOn = false;
     
 };
 class FMVoice : public juce::SynthesiserVoice
@@ -91,6 +97,15 @@ public:
     void updateParamsPerBlock(VoiceParams vp);
     
 private:
+    bool modOctaveOn;
+    bool modVibFreqOn;
+    bool modVibDepthOn;
+    
+    float octave = 0.0f;       // octave shift in +/- multiples
+    float vibFreq = 0.0f;      // vibrato frequency in Hz
+    float vibDepth = 0.0f;     // vibrato depth in semitones
+    float vibPhase = 0.0f;
+    
     float sr;
     float osFactor;
     void updateParamsWithGlide(float value);

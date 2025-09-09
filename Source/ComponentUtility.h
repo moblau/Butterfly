@@ -44,6 +44,11 @@ public:
         if ( auto * param = apvtsRef.getParameter(newLabel+prefix+"modulate")){
             isModulated = param->getValue();
             customLookAndFeel.setModulationStatus(isModulated);
+            canBeModulated = true;
+        }
+        else{
+            isModulated = false;
+            canBeModulated = false;
         }
         startTimerHz(30);
         
@@ -112,7 +117,7 @@ public:
     // Toggle modulation colour on right-click (including ctrl-click on macOS)
     void mouseDown(const juce::MouseEvent& e) override
     {
-        if (e.mods.isRightButtonDown() || e.mods.isCtrlDown() ){
+        if (canBeModulated && (e.mods.isRightButtonDown() || e.mods.isCtrlDown()) ){
             if ( isModulated == 0 ){
                 isModulated = 1;
             }
@@ -164,8 +169,8 @@ private:
 
     juce::Slider slider;
     juce::Label label;
-    int isModulated;
-    
+    int isModulated = false;
+    bool canBeModulated;
     
     CustomLookAndFeel customLookAndFeel;
     juce::AudioProcessorValueTreeState& apvts;

@@ -54,9 +54,19 @@ void FMVoice::startNote(int midiNoteNumber, float velocity,
     env.noteOn();
     voiceFilter2.startADSR();
     baseFrequency = juce::MidiMessage::getMidiNoteInHertz(midiNoteNumber);
-    carrierFrequency = baseFrequency * detuneRatio;
-    modulationRatio = static_cast<float>(modRatioNum) / static_cast<float>(modRatioDen);
+    
+    
+    float octaveShift = std::pow(2.0f, octave);
+    carrierFrequency = baseFrequency * detuneRatio * octaveShift;
+    modulationRatio  = static_cast<float>(modRatioNum) / static_cast<float>(modRatioDen);
     modulatorFrequency = carrierFrequency * modulationRatio;
+    
+    
+//    carrierFrequency = baseFrequency * detuneRatio;
+//    modulationRatio = static_cast<float>(modRatioNum) / static_cast<float>(modRatioDen);
+//    modulatorFrequency = carrierFrequency * modulationRatio;
+    
+    
     this->midiNoteNumber = midiNoteNumber;
 //    phase = 0.0f;
 //    modPhase = 0.0f;
@@ -214,11 +224,62 @@ void FMVoice::renderNextBlock(juce::AudioBuffer<float>& outputBuffer,
         out = ds.processSample(out);
 
         // 9) write into oversampled buffer with pan & gain
+        // Advance vibrato phase
+        vibPhase = std::fmod(vibPhase + (twoPi * vibFreq / osSampleRate), twoPi);
 
+        // Vibrato modulation in semitones
+        
+        // Advance vibrato phase
+        float modVibFreq  = modVibFreqOn  ? vibFreq  * (1.0f + stepValue) : vibFreq;
+        float modVibDepth = modVibDepthOn ? vibDepth * (1.0f + stepValue) : vibDepth;
+
+        vibPhase = std::fmod(vibPhase + (twoPi * modVibFreq / osSampleRate), twoPi);
+
+        // Vibrato modulation in semitones
+        float vibSemitones = std::sin(vibPhase) * modVibDepth;
+
+        // Convert semitones to frequency ratio
+        float vibRatio = std::pow(2.0f, vibSemitones / 12.0f);
+
+        // Compute octave shift (integer, snapped)
+        int octaveShift = static_cast<int>(std::round(octave));
+
+        if (modOctaveOn)
+        {
+            // Sequencer modulation: stepValue assumed -1..+1, scale up to ±5 semitone/octave offsets
+            int stepOffset = static_cast<int>(std::round(stepValue * 5.0f));
+            octaveShift += stepOffset;
+        }
+
+        // Clamp octave shift to ±2 octaves
+        octaveShift = juce::jlimit(-2, 2, octaveShift);
+
+        // Convert octave shift to frequency ratio
+        float octaveRatio = std::pow(2.0f, octaveShift);
+
+        // Final carrier and modulator frequencies
+        float carrierNow   = baseFrequency * detuneRatio * octaveRatio * vibRatio;
+        float modulatorNow = carrierNow * modulationRatio;
+
+        // Advance phases at oversampled rate
+        phase    = std::fmod(phase    + carrierNow   * twoPi / osSampleRate, twoPi);
+        modPhase = std::fmod(modPhase + modulatorNow * twoPi / osSampleRate, twoPi);
+//
+//        // Convert semitones to frequency ratio
+//        float vibRatio = std::pow(2.0f, vibSemitones / 12.0f);
+//
+//        // Recalculate carrier + modulator frequency with vibrato & octave
+//        float octaveShift = std::pow(2.0f, octave);
+//        float carrierNow = baseFrequency * detuneRatio * octaveShift * vibRatio;
+//        float modulatorNow = carrierNow * modulationRatio;
+//
+//        // Use vibrato-modulated frequencies for phase increment
+//        phase    = std::fmod(phase    + carrierNow   * twoPi / osSampleRate, twoPi);
+//        modPhase = std::fmod(modPhase + modulatorNow * twoPi / osSampleRate, twoPi); 
 
         // 10) advance phases at oversampled rate
-        phase    = std::fmod(phase    + carrierFrequency    * twoPi / osSampleRate, twoPi);
-        modPhase = std::fmod(modPhase + modulatorFrequency * twoPi / osSampleRate, twoPi);
+//        phase    = std::fmod(phase    + carrierFrequency    * twoPi / osSampleRate, twoPi);
+//        modPhase = std::fmod(modPhase + modulatorFrequency * twoPi / osSampleRate, twoPi);
 
         prevWarpedPhase = warped;
 //        if (isStealing)
@@ -476,6 +537,14 @@ void FMVoice::updateParamsPerBlock(VoiceParams vp)
     setDownsampleFactor(vp.downsample);
     bpm = vp.bpm;
     ppq = vp.ppq;
+    
+    octave   = vp.octave;
+    vibFreq  = vp.vibFreq;
+    vibDepth = vp.vibDepth;
+    modOctaveOn = vp.modOctaveOn;
+    modVibFreqOn  = vp.modVibFreqOn;
+    modVibDepthOn = vp.modVibDepthOn;
+    
 }
 
 //void FMVoice::updateParamsWithGlide(float value)

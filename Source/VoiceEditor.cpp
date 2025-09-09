@@ -15,7 +15,10 @@ freqSlider("Frequency", apvts, voicePrefix),
 resSlider("Resonance", apvts, voicePrefix),
 resonatorOffsetSlider("Resonator Offset", apvts, voicePrefix),
 resonatorFeedbackSlider("Resonator Feedback", apvts, voicePrefix),
-resonatorOffsetStrengthSlider("Offset Strength", apvts, voicePrefix)
+resonatorOffsetStrengthSlider("Offset Strength", apvts, voicePrefix),
+vibratoDepthSlider("Vib Depth", apvts, voicePrefix),
+vibratoFreqSlider("Vib Freq", apvts, voicePrefix),
+octaveSlider("Octave", apvts, voicePrefix)
 {
     this->voicePrefix = voicePrefix;
 //    setupSlider(panSlider,panSliderLabel,"Pan");
@@ -41,6 +44,10 @@ resonatorOffsetStrengthSlider("Offset Strength", apvts, voicePrefix)
     addAndMakeVisible(resonatorFeedbackSlider);
     addAndMakeVisible(resonatorOffsetStrengthSlider);
     
+    addAndMakeVisible(vibratoDepthSlider);
+    addAndMakeVisible(vibratoFreqSlider);
+    addAndMakeVisible(octaveSlider);
+    
     //    setupComboBox(modWaveformBox);
 //    setupComboBox(waveformBox);
     addAndMakeVisible(carrierWaveform);
@@ -60,6 +67,10 @@ resonatorOffsetStrengthSlider("Offset Strength", apvts, voicePrefix)
     resOffsetAttach = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(apvts,  "res_offset"+voicePrefix, resonatorOffsetSlider.getSlider());
     resFeedbackAttach = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(apvts,  "res_feedback"+voicePrefix, resonatorFeedbackSlider.getSlider());
     resOffsetStrengthAttach = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(apvts,  "res_offset_strength"+voicePrefix, resonatorOffsetStrengthSlider.getSlider());
+    
+    vibratoDepthAttach = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(apvts,  "Vib Depth"+voicePrefix, vibratoDepthSlider.getSlider());
+    vibratoFreqAttach = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(apvts,  "Vib Freq"+voicePrefix, vibratoFreqSlider.getSlider());
+    octaveAttach = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(apvts,  "Octave"+voicePrefix, octaveSlider.getSlider());
 
 
     
@@ -177,20 +188,26 @@ void VoiceEditor::resized()
     auto area = getLocalBounds();
     auto left = area.removeFromLeft(getWidth()/2);
     auto topLeft = left.removeFromTop(getHeight()/2);
-
+    int hSlider = 70;
 //    waveformBox.setBounds(topLeft.removeFromTop(topLeft.getHeight()/4));
     carrierWaveform.setBounds(topLeft.removeFromTop(topLeft.getHeight()/4));
     auto width = topLeft.getWidth()/4;
+    auto topBottomLeft = topLeft.removeFromBottom(topLeft.getHeight()/2);
+    topLeft.removeFromTop(35);
     
-    panSlider.setBounds(topLeft.removeFromLeft(width).withHeight(110)
+    octaveSlider.setBounds(topBottomLeft.removeFromLeft(width).withHeight(hSlider));
+    vibratoDepthSlider.setBounds(topBottomLeft.removeFromLeft(width).withHeight(hSlider));
+    vibratoFreqSlider.setBounds(topBottomLeft.removeFromLeft(width).withHeight(hSlider));
+    
+    panSlider.setBounds(topLeft.removeFromLeft(width).withHeight(hSlider)
         .withY(topLeft.getY() + (topLeft.getHeight() - 110) / 2));
 
-    detuneSlider.setBounds(topLeft.removeFromLeft(width).withHeight(110)
+    detuneSlider.setBounds(topLeft.removeFromLeft(width).withHeight(hSlider)
         .withY(topLeft.getY() + (topLeft.getHeight() - 110) / 2));
 
-    downsampleSlider.setBounds(topLeft.removeFromLeft(width).withHeight(110)
+    downsampleSlider.setBounds(topLeft.removeFromLeft(width).withHeight(hSlider)
         .withY(topLeft.getY() + (topLeft.getHeight() - 110) / 2));
-    aliasToggle.setBounds(topLeft.removeFromLeft(width));
+    aliasToggle.setBounds(topLeft.removeFromLeft(width).removeFromBottom(20));
     
 //    modWaveformBox.setBounds(left.removeFromTop(left.getHeight()/4));
     modWaveform.setBounds(left.removeFromTop(left.getHeight()/4));
